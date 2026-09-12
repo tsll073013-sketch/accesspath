@@ -333,6 +333,15 @@
     });
   }
 
+  function makeSearchResultIcon() {
+    return L.divIcon({
+      className: "",
+      html: `<div style="width:14px;height:14px;border-radius:50% 50% 50% 0;background:#3d6b5c;transform:rotate(-45deg);border:2px solid #fdfcf8;box-shadow:0 1px 4px rgba(28,43,40,0.4);"></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 12]
+    });
+  }
+
   const map = L.map("map", { zoomControl: true }).setView([25.0375, 121.535], 13);
 
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -341,6 +350,7 @@
   }).addTo(map);
 
   let markerLayer = L.layerGroup().addTo(map);
+  let searchResultsLayer = L.layerGroup().addTo(map);
 
   function renderMarkers() {
     markerLayer.clearLayers();
@@ -474,6 +484,25 @@
   });
 
   // ----- Click-to-identify (like tapping a spot on Google Maps) -----
+  function renderEmptyPanel(name, latlng, addressLine) {
+    document.getElementById("dp-name").textContent = name;
+    const addressHtml = addressLine ? `<div class="dp-empty" style="padding-bottom:0;">${addressLine}</div>` : "";
+    document.getElementById("dp-body").innerHTML = `
+      <div class="dp-status-row">
+        <span class="dp-badge" style="background:${colors.unknown}">No info yet</span>
+      </div>
+      ${addressHtml}
+      <div class="dp-empty">Nobody has reported accessibility details for this location yet.</div>
+      <button class="dp-action" id="dp-add-btn">+ Add accessibility info</button>
+    `;
+    document.getElementById("dp-add-btn").addEventListener("click", () => {
+      pendingLatLng = latlng;
+      openForm();
+      document.getElementById("f-name").value = name;
+    });
+    document.getElementById("detail-panel").classList.add("open");
+  }
+
   async function showIdentifyPanel(latlng) {
     document.getElementById("dp-name").textContent = "Looking up…";
     document.getElementById("dp-body").innerHTML = "";
@@ -490,19 +519,7 @@
       // fall back to generic name below
     }
 
-    document.getElementById("dp-name").textContent = name;
-    document.getElementById("dp-body").innerHTML = `
-      <div class="dp-status-row">
-        <span class="dp-badge" style="background:${colors.unknown}">No info yet</span>
-      </div>
-      <div class="dp-empty">Nobody has reported accessibility details for this location yet.</div>
-      <button class="dp-action" id="dp-add-btn">+ Add accessibility info</button>
-    `;
-    document.getElementById("dp-add-btn").addEventListener("click", () => {
-      pendingLatLng = latlng;
-      openForm();
-      document.getElementById("f-name").value = name;
-    });
+    renderEmptyPanel(name, latlng);
   }
 
   function openForm() {
@@ -544,34 +561,126 @@
   });
 
   // ----- Search -----
+  // ----- Distance helper for de-duplicating search results against your own data -----
+  function metersBetween(lat1, lng1, lat2, lng2) {
+    const R = 6371000;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  // ----- Real place/business search (e.g. "7-Eleven", "Wenshan Park") -----
+  // Uses OpenStreetMap's Overpass API to find every matching named place
+  // near the current map view, the same way Google shows every branch of
+  // a chain when you search its name.
+  async function searchPOIs(query) {
+    const center = map.getCenter();
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const overpassQuery = `[out:json][timeout:25];(node["name"~"${escaped}",i](around:5000,${center.lat},${center.lng});way["name"~"${escaped}",i](around:5000,${center.lat},${center.lng}););out center 40;`;
+
+    const res = await fetch("https://overpass-api.de/api/interpreter", {
+      method: "POST",
+      body: "data=" + encodeURIComponent(overpassQuery)
+    });
+    const data = await res.json();
+
+    return data.elements
+      .map(el => {
+        const lat = el.lat || (el.center && el.center.lat);
+        const lng = el.lon || (el.center && el.center.lon);
+        const name = el.tags && el.tags.name;
+        if (!lat || !lng || !name) return null;
+        const addrParts = [el.tags["addr:city"], el.tags["addr:district"], el.tags["addr:street"], el.tags["addr:housenumber"]].filter(Boolean);
+        return { name, lat, lng, address: addrParts.join(" ") };
+      })
+      .filter(Boolean);
+  }
+
+  function showPOIPanel(poi) {
+    // If this real-world place already has accessibility info in your
+    // database (matched by name + closeness), show that instead of "no info".
+    const existing = places.find(p =>
+      p.name.toLowerCase() === poi.name.toLowerCase() &&
+      metersBetween(p.lat, p.lng, poi.lat, poi.lng) < 60
+    );
+    if (existing) {
+      showPlacePanel(existing);
+    } else {
+      renderEmptyPanel(poi.name, L.latLng(poi.lat, poi.lng), poi.address);
+    }
+  }
+
   document.getElementById("search-btn").addEventListener("click", async () => {
     const query = document.getElementById("search-input").value.trim();
     if (!query) return;
 
-    const match = places.find(p => p.name.toLowerCase().includes(query.toLowerCase()));
-    if (match) {
-      map.setView([match.lat, match.lng], 17);
-      showPlacePanel(match);
+    searchResultsLayer.clearLayers();
+
+    // 1. Check places already in your own database (can be several, e.g.
+    //    if you've logged more than one branch of the same chain).
+    const localMatches = places.filter(p => p.name.toLowerCase().includes(query.toLowerCase()));
+
+    // 2. Also search the real world for every matching named place nearby.
+    let poiMatches = [];
+    try {
+      poiMatches = await searchPOIs(query);
+    } catch (err) {
+      console.error("Place search failed:", err);
+    }
+
+    // Don't show a duplicate pin for a POI that's already one of your own entries.
+    const newPOIs = poiMatches.filter(poi =>
+      !localMatches.some(p => metersBetween(p.lat, p.lng, poi.lat, poi.lng) < 60)
+    );
+
+    newPOIs.forEach(poi => {
+      const marker = L.marker([poi.lat, poi.lng], { icon: makeSearchResultIcon() });
+      marker.on("click", () => showPOIPanel(poi));
+      marker.addTo(searchResultsLayer);
+    });
+
+    const totalResults = localMatches.length + newPOIs.length;
+
+    if (totalResults === 0) {
+      // 3. Last resort: treat it as a specific address rather than a place name.
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=tw&limit=1`
+        );
+        const results = await res.json();
+        if (results.length > 0) {
+          const lat = parseFloat(results[0].lat);
+          const lng = parseFloat(results[0].lon);
+          map.setView([lat, lng], 17);
+          showIdentifyPanel(L.latLng(lat, lng));
+        } else {
+          alert("Couldn't find that place in Taiwan. Try a different search term.");
+        }
+      } catch (err) {
+        alert("Search failed — check your internet connection and try again.");
+      }
       return;
     }
 
-    // Not in your database yet — search the real world via OpenStreetMap.
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=tw&limit=1`
-      );
-      const results = await res.json();
-      if (results.length > 0) {
-        const lat = parseFloat(results[0].lat);
-        const lng = parseFloat(results[0].lon);
-        map.setView([lat, lng], 17);
-        showIdentifyPanel(L.latLng(lat, lng));
+    if (totalResults === 1) {
+      if (localMatches.length === 1) {
+        map.setView([localMatches[0].lat, localMatches[0].lng], 17);
+        showPlacePanel(localMatches[0]);
       } else {
-        alert("Couldn't find that place in Taiwan. Try a different search term.");
+        map.setView([newPOIs[0].lat, newPOIs[0].lng], 17);
+        showPOIPanel(newPOIs[0]);
       }
-    } catch (err) {
-      alert("Search failed — check your internet connection and try again.");
+      return;
     }
+
+    // Multiple results — zoom to fit all of them; the person clicks the one they want.
+    const allCoords = [
+      ...localMatches.map(p => [p.lat, p.lng]),
+      ...newPOIs.map(p => [p.lat, p.lng])
+    ];
+    map.fitBounds(allCoords, { padding: [60, 60], maxZoom: 16 });
   });
 </script>
 
