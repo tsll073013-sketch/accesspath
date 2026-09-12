@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AccessPath Taiwan — Find accessible places</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  :root {
+    --ink: #1c2b28;
+    --paper: #f6f4ee;
+    --line: #d8d3c4;
+    --accent: #3d6b5c;
+    --good: #4a8f6f;
+    --partial: #d9a441;
+    --unknown: #b7b2a3;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+  }
+
+  header {
+    padding: 16px 22px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  header h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
+  header p { margin: 2px 0 0; font-size: 13px; color: #5b5648; }
+
+  #toolbar { display: flex; gap: 8px; align-items: center; }
+
+  #search-input {
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-size: 14px;
+    width: 200px;
+    background: white;
+  }
+
+  button.primary, #search-btn {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 6px;
+    background: var(--accent);
+    color: white;
+    font-size: 13.5px;
+    cursor: pointer;
+  }
+  button.primary:hover, #search-btn:hover { background: #26594c; }
+
+  #add-mode-btn.active { background: #b8862f; }
+
+  #map { height: calc(100vh - 64px); width: 100%; }
+
+  /* Mutes the base map's default colors/icons so it reads as background
+     context (roads, place names) rather than competing with your markers. */
+  .leaflet-tile-pane {
+    filter: grayscale(55%) brightness(1.12) contrast(0.9) saturate(0.7);
+  }
+
+  .legend {
+    position: absolute;
+    z-index: 500;
+    bottom: 22px;
+    left: 12px;
+    background: rgba(246, 244, 238, 0.95);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12.5px;
+    line-height: 1.9;
+  }
+  .legend span.dot {
+    display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px;
+  }
+
+  .hint-banner {
+    position: absolute;
+    z-index: 500;
+    top: 78px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #b8862f;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    display: none;
+  }
+
+  .popup-title { font-weight: 600; font-size: 15px; margin: 0 0 4px; }
+  .popup-row { font-size: 13px; margin: 3px 0; color: #3c392f; }
+  .popup-row b { color: var(--ink); }
+  .popup-updated { margin-top: 8px; font-size: 11.5px; color: var(--unknown); }
+  .popup-note { margin-top: 8px; font-size: 11px; color: var(--unknown); font-style: italic; }
+
+  /* Modal form */
+  #overlay {
+    display: none;
+    position: fixed; inset: 0; background: rgba(28,43,40,0.4);
+    z-index: 1000; align-items: center; justify-content: center;
+  }
+  #form-card {
+    background: white; border-radius: 10px; padding: 22px 24px;
+    width: 340px; max-width: 90vw; box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+  }
+  #form-card h2 { font-size: 16px; margin: 0 0 4px; }
+  #form-card p.sub { font-size: 12.5px; color: #7a7565; margin: 0 0 14px; }
+  #form-card label {
+    display: block; font-size: 12.5px; font-weight: 600; margin: 10px 0 4px;
+  }
+  #form-card input, #form-card select, #form-card textarea {
+    width: 100%; padding: 7px 9px; border: 1px solid var(--line);
+    border-radius: 6px; font-size: 13.5px; font-family: inherit;
+  }
+  #form-card textarea { resize: vertical; min-height: 44px; }
+  .form-actions { margin-top: 16px; display: flex; gap: 8px; justify-content: flex-end; }
+  .form-actions button.cancel {
+    background: none; border: 1px solid var(--line); border-radius: 6px;
+    padding: 8px 14px; font-size: 13px; cursor: pointer; color: var(--ink);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>AccessPath Taiwan</h1>
+    <p>Accessibility details for places in Taipei — added by people who've been there.</p>
+  </div>
+  <div id="toolbar">
+    <input id="search-input" type="text" placeholder="Search a place" />
+    <button id="search-btn">Search</button>
+    <button id="add-mode-btn" class="primary">+ Add a place</button>
+  </div>
+</header>
+
+<div id="map"></div>
+
+<div class="hint-banner" id="hint-banner">Click anywhere on the map to drop a pin</div>
+
+<div class="legend">
+  <div><span class="dot" style="background:var(--good)"></span>Confirmed accessible</div>
+  <div><span class="dot" style="background:var(--partial)"></span>Partially accessible</div>
+  <div><span class="dot" style="background:var(--unknown)"></span>No info yet</div>
+</div>
+
+<!-- Add/edit place form -->
+<div id="overlay">
+  <div id="form-card">
+    <h2>Add accessibility info</h2>
+    <p class="sub">This is saved to your sample database and will still be here next time you open this page.</p>
+    <label>Place name</label>
+    <input id="f-name" type="text" placeholder="e.g. Ximending MRT Exit 6" />
+    <label>Overall status</label>
+    <select id="f-status">
+      <option value="good">Confirmed accessible</option>
+      <option value="partial">Partially accessible</option>
+      <option value="unknown">No info yet</option>
+    </select>
+    <label>Entrance</label>
+    <input id="f-entrance" type="text" placeholder="e.g. Ramp at side entrance" />
+    <label>Restroom</label>
+    <input id="f-restroom" type="text" placeholder="e.g. Accessible stall on 1F" />
+    <label>Parking</label>
+    <input id="f-parking" type="text" placeholder="e.g. 2 accessible spaces" />
+    <label>Notes</label>
+    <textarea id="f-notes" placeholder="Anything else worth knowing"></textarea>
+    <div class="form-actions">
+      <button class="cancel" id="f-cancel">Cancel</button>
+      <button class="primary" id="f-save">Save place</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ===== FILL THESE IN — see the setup guide, Part 2 =====
+  const SUPABASE_URL = "PASTE_YOUR_SUPABASE_PROJECT_URL_HERE";
+  const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_ANON_KEY_HERE";
+  // ========================================================
+
+  const supabaseClient = (SUPABASE_URL.startsWith("http"))
+    ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
+
+  const colors = { good: "#4a8f6f", partial: "#d9a441", unknown: "#b7b2a3" };
+
+  // ----- Seed data: real Taipei landmarks, PLACEHOLDER accessibility details for demo only -----
+  const seedPlaces = [
+    {
+      id: "seed-1",
+      name: "Taipei 101",
+      lat: 25.0339, lng: 121.5645,
+      status: "good",
+      entrance: "Step-free main entrance, automatic doors",
+      restroom: "Accessible restroom on B1 and observatory floor",
+      parking: "Accessible parking in basement garage",
+      notes: "Demo data — not yet verified.",
+      lastUpdated: "2026-08-14"
+    },
+    {
+      id: "seed-2",
+      name: "Chiang Kai-Shek Memorial Hall",
+      lat: 25.0347, lng: 121.5216,
+      status: "good",
+      entrance: "Ramp access at main plaza level",
+      restroom: "Accessible restroom near main hall",
+      parking: "Accessible parking near Liberty Square",
+      notes: "Demo data — not yet verified.",
+      lastUpdated: "2026-07-30"
+    },
+    {
+      id: "seed-3",
+      name: "Ximending Shopping District",
+      lat: 25.0421, lng: 121.5079,
+      status: "partial",
+      entrance: "Mostly step-free, some shops have raised thresholds",
+      restroom: "Public accessible restroom near Red House",
+      parking: "No dedicated accessible parking in pedestrian zone",
+      notes: "Demo data — not yet verified.",
+      lastUpdated: "2026-06-02"
+    },
+    {
+      id: "seed-4",
+      name: "Da'an Forest Park",
+      lat: 25.0264, lng: 121.5352,
+      status: "good",
+      entrance: "Multiple step-free entrances",
+      restroom: "Accessible restrooms at several points in the park",
+      parking: "Accessible parking near MRT exit",
+      notes: "Demo data — not yet verified.",
+      lastUpdated: "2026-08-01"
+    },
+    {
+      id: "seed-5",
+      name: "Taipei Main Station",
+      lat: 25.0478, lng: 121.5170,
+      status: "unknown",
+      entrance: "Not yet reported",
+      restroom: "Not yet reported",
+      parking: "Not yet reported",
+      notes: "",
+      lastUpdated: null
+    }
+  ];
+
+  let places = [];
+  let addMode = false;
+  let pendingLatLng = null;
+
+  function makeIcon(status) {
+    const color = colors[status] || colors.unknown;
+    return L.divIcon({
+      className: "",
+      html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2.5px solid #fdfcf8;box-shadow:0 1px 4px rgba(28,43,40,0.35);"></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    });
+  }
+
+  const map = L.map("map", { zoomControl: true }).setView([25.0375, 121.535], 13);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map);
+
+  let markerLayer = L.layerGroup().addTo(map);
+
+  function renderMarkers() {
+    markerLayer.clearLayers();
+    places.forEach(place => {
+      const marker = L.marker([place.lat, place.lng], { icon: makeIcon(place.status) });
+      const updatedText = place.lastUpdated
+        ? `Last confirmed ${place.lastUpdated}`
+        : "No reports yet — be the first to add info";
+      const noteHtml = place.notes ? `<div class="popup-note">${place.notes}</div>` : "";
+
+      marker.bindPopup(`
+        <div class="popup-title">${place.name}</div>
+        <div class="popup-row"><b>Entrance:</b> ${place.entrance}</div>
+        <div class="popup-row"><b>Restroom:</b> ${place.restroom}</div>
+        <div class="popup-row"><b>Parking:</b> ${place.parking}</div>
+        <div class="popup-updated">${updatedText}</div>
+        ${noteHtml}
+      `);
+      marker.addTo(markerLayer);
+    });
+  }
+
+  // ----- Real database (Supabase) -----
+  async function loadPlaces() {
+    if (!supabaseClient) {
+      // Not configured yet — show sample data so the page still works.
+      places = seedPlaces;
+      renderMarkers();
+      return;
+    }
+    const { data, error } = await supabaseClient
+      .from("places")
+      .select("*")
+      .eq("approved", true);
+
+    if (error) {
+      console.error("Could not load places:", error);
+      places = seedPlaces;
+    } else {
+      places = data.map(p => ({
+        id: p.id,
+        name: p.name,
+        lat: p.lat,
+        lng: p.lng,
+        status: p.status,
+        entrance: p.entrance,
+        restroom: p.restroom,
+        parking: p.parking,
+        notes: p.notes,
+        lastUpdated: p.last_updated
+      }));
+    }
+    renderMarkers();
+  }
+
+  async function submitPlace(newPlace) {
+    if (!supabaseClient) {
+      // Not configured yet — just show it locally for preview purposes.
+      places.push(newPlace);
+      renderMarkers();
+      alert("Demo mode: this place is shown locally only. Connect Supabase (see setup guide) to save it for real.");
+      return;
+    }
+    const { error } = await supabaseClient.from("places").insert({
+      name: newPlace.name,
+      lat: newPlace.lat,
+      lng: newPlace.lng,
+      status: newPlace.status,
+      entrance: newPlace.entrance,
+      restroom: newPlace.restroom,
+      parking: newPlace.parking,
+      notes: newPlace.notes,
+      last_updated: newPlace.lastUpdated,
+      approved: false
+    });
+    if (error) {
+      console.error("Could not save place:", error);
+      alert("Something went wrong saving this place. Check the browser console for details.");
+      return;
+    }
+    alert("Thanks! Your submission is saved and will appear once it's reviewed.");
+  }
+
+  loadPlaces();
+
+  // ----- Add-a-place flow -----
+  const addBtn = document.getElementById("add-mode-btn");
+  const hintBanner = document.getElementById("hint-banner");
+  const overlay = document.getElementById("overlay");
+
+  addBtn.addEventListener("click", () => {
+    addMode = !addMode;
+    addBtn.classList.toggle("active", addMode);
+    hintBanner.style.display = addMode ? "block" : "none";
+  });
+
+  map.on("click", (e) => {
+    if (!addMode) return;
+    pendingLatLng = e.latlng;
+    addMode = false;
+    addBtn.classList.remove("active");
+    hintBanner.style.display = "none";
+    openForm();
+  });
+
+  function openForm() {
+    document.getElementById("f-name").value = "";
+    document.getElementById("f-status").value = "unknown";
+    document.getElementById("f-entrance").value = "";
+    document.getElementById("f-restroom").value = "";
+    document.getElementById("f-parking").value = "";
+    document.getElementById("f-notes").value = "";
+    overlay.style.display = "flex";
+  }
+
+  document.getElementById("f-cancel").addEventListener("click", () => {
+    overlay.style.display = "none";
+    pendingLatLng = null;
+  });
+
+  document.getElementById("f-save").addEventListener("click", async () => {
+    const name = document.getElementById("f-name").value.trim();
+    if (!name || !pendingLatLng) {
+      alert("Please enter a place name.");
+      return;
+    }
+    const newPlace = {
+      id: "place-" + Date.now(),
+      name,
+      lat: pendingLatLng.lat,
+      lng: pendingLatLng.lng,
+      status: document.getElementById("f-status").value,
+      entrance: document.getElementById("f-entrance").value.trim() || "Not specified",
+      restroom: document.getElementById("f-restroom").value.trim() || "Not specified",
+      parking: document.getElementById("f-parking").value.trim() || "Not specified",
+      notes: document.getElementById("f-notes").value.trim(),
+      lastUpdated: new Date().toISOString().slice(0, 10)
+    };
+    await submitPlace(newPlace);
+    overlay.style.display = "none";
+    pendingLatLng = null;
+  });
+
+  // ----- Search -----
+  document.getElementById("search-btn").addEventListener("click", () => {
+    const query = document.getElementById("search-input").value.trim().toLowerCase();
+    if (!query) return;
+    const match = places.find(p => p.name.toLowerCase().includes(query));
+    if (match) {
+      map.setView([match.lat, match.lng], 17);
+    } else {
+      alert("No match found yet in the sample database.");
+    }
+  });
+</script>
+
+</body>
+</html>
