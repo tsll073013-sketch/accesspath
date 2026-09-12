@@ -90,6 +90,57 @@
     display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px;
   }
 
+  /* Slide-in detail panel, like tapping a place on Google Maps */
+  #detail-panel {
+    position: absolute;
+    z-index: 700;
+    top: 16px;
+    left: 12px;
+    width: 320px;
+    max-width: 85vw;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    background: #fdfcf8;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(28,43,40,0.22);
+    transform: translateX(-130%);
+    transition: transform 0.22s ease;
+  }
+  #detail-panel.open { transform: translateX(0); }
+
+  #detail-panel .dp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 16px 16px 4px;
+  }
+  #detail-panel .dp-name { font-size: 17px; font-weight: 700; margin: 0; line-height: 1.3; }
+  #detail-panel .dp-close {
+    background: none; border: none; cursor: pointer;
+    font-size: 18px; color: var(--unknown); line-height: 1;
+    padding: 2px 4px;
+  }
+  #detail-panel .dp-status-row { padding: 2px 16px 12px; }
+  #detail-panel .dp-badge {
+    display: inline-block;
+    font-size: 12px; font-weight: 600;
+    padding: 3px 10px; border-radius: 20px;
+    color: white;
+  }
+  #detail-panel .dp-section { padding: 10px 16px; border-top: 1px solid var(--line); }
+  #detail-panel .dp-row { display: flex; gap: 10px; font-size: 13.5px; margin: 8px 0; color: #3c392f; }
+  #detail-panel .dp-row .dp-icon { width: 18px; flex-shrink: 0; text-align: center; }
+  #detail-panel .dp-row b { display: block; color: var(--ink); font-size: 12px; text-transform: uppercase; letter-spacing: 0.02em; margin-bottom: 1px; }
+  #detail-panel .dp-updated { padding: 8px 16px 4px; font-size: 11.5px; color: var(--unknown); }
+  #detail-panel .dp-notes { padding: 0 16px 12px; font-size: 12.5px; font-style: italic; color: #7a7565; }
+  #detail-panel .dp-action {
+    display: block; margin: 4px 16px 16px;
+    text-align: center; padding: 9px; border-radius: 7px;
+    background: var(--accent); color: white; font-size: 13.5px;
+    text-decoration: none; cursor: pointer; border: none; width: calc(100% - 32px);
+  }
+  #detail-panel .dp-empty { padding: 4px 16px 16px; font-size: 13px; color: #7a7565; }
+
   .hint-banner {
     position: absolute;
     z-index: 500;
@@ -152,6 +203,14 @@
 </header>
 
 <div id="map"></div>
+
+<div id="detail-panel">
+  <div class="dp-header">
+    <h2 class="dp-name" id="dp-name">—</h2>
+    <button class="dp-close" id="dp-close">✕</button>
+  </div>
+  <div id="dp-body"></div>
+</div>
 
 <div class="hint-banner" id="hint-banner">Click anywhere on the map to drop a pin</div>
 
@@ -287,22 +346,46 @@
     markerLayer.clearLayers();
     places.forEach(place => {
       const marker = L.marker([place.lat, place.lng], { icon: makeIcon(place.status) });
-      const updatedText = place.lastUpdated
-        ? `Last confirmed ${place.lastUpdated}`
-        : "No reports yet — be the first to add info";
-      const noteHtml = place.notes ? `<div class="popup-note">${place.notes}</div>` : "";
-
-      marker.bindPopup(`
-        <div class="popup-title">${place.name}</div>
-        <div class="popup-row"><b>Entrance:</b> ${place.entrance}</div>
-        <div class="popup-row"><b>Restroom:</b> ${place.restroom}</div>
-        <div class="popup-row"><b>Parking:</b> ${place.parking}</div>
-        <div class="popup-updated">${updatedText}</div>
-        ${noteHtml}
-      `);
+      marker.on("click", () => showPlacePanel(place));
       marker.addTo(markerLayer);
     });
   }
+
+  const statusLabels = { good: "Confirmed accessible", partial: "Partially accessible", unknown: "No info yet" };
+
+  function showPlacePanel(place) {
+    document.getElementById("dp-name").textContent = place.name;
+    const updatedText = place.lastUpdated
+      ? `Last confirmed ${place.lastUpdated}`
+      : "No reports yet — be the first to add info";
+    const notesHtml = place.notes ? `<div class="dp-notes">${place.notes}</div>` : "";
+    const hasInfo = place.entrance !== "Not yet reported" || place.restroom !== "Not yet reported";
+
+    document.getElementById("dp-body").innerHTML = `
+      <div class="dp-status-row">
+        <span class="dp-badge" style="background:${colors[place.status] || colors.unknown}">${statusLabels[place.status] || statusLabels.unknown}</span>
+      </div>
+      <div class="dp-section">
+        <div class="dp-row"><span class="dp-icon">🚪</span><span><b>Entrance</b>${place.entrance}</span></div>
+        <div class="dp-row"><span class="dp-icon">🚻</span><span><b>Restroom</b>${place.restroom}</span></div>
+        <div class="dp-row"><span class="dp-icon">🅿️</span><span><b>Parking</b>${place.parking}</span></div>
+      </div>
+      <div class="dp-updated">${updatedText}</div>
+      ${notesHtml}
+      <button class="dp-action" id="dp-add-btn">${hasInfo ? "Suggest an update" : "+ Add accessibility info"}</button>
+    `;
+    document.getElementById("dp-add-btn").addEventListener("click", () => {
+      pendingLatLng = L.latLng(place.lat, place.lng);
+      openForm();
+      document.getElementById("f-name").value = place.name;
+    });
+    document.getElementById("detail-panel").classList.add("open");
+    map.panTo([place.lat, place.lng]);
+  }
+
+  document.getElementById("dp-close").addEventListener("click", () => {
+    document.getElementById("detail-panel").classList.remove("open");
+  });
 
   // ----- Real database (Supabase) -----
   async function loadPlaces() {
@@ -386,53 +469,41 @@
       hintBanner.style.display = "none";
       openForm();
     } else {
-      showIdentifyPopup(e.latlng);
+      showIdentifyPanel(e.latlng);
     }
   });
 
   // ----- Click-to-identify (like tapping a spot on Google Maps) -----
-  let lastIdentify = null;
+  async function showIdentifyPanel(latlng) {
+    document.getElementById("dp-name").textContent = "Looking up…";
+    document.getElementById("dp-body").innerHTML = "";
+    document.getElementById("detail-panel").classList.add("open");
 
-  async function showIdentifyPopup(latlng) {
-    const popup = L.popup({ maxWidth: 250 })
-      .setLatLng(latlng)
-      .setContent('<div class="popup-row">Looking up this location…</div>')
-      .openOn(map);
-
+    let name = "Unnamed location";
     try {
       const res = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}&zoom=18`
       );
       const data = await res.json();
-      const name = data.display_name
-        ? data.display_name.split(",").slice(0, 2).join(",")
-        : "Unnamed location";
-      lastIdentify = { lat: latlng.lat, lng: latlng.lng, name };
-      popup.setContent(`
-        <div class="popup-title">${name}</div>
-        <a href="#" class="popup-add-btn" id="identify-add-btn">+ Add accessibility info here</a>
-      `);
+      if (data.display_name) name = data.display_name.split(",").slice(0, 2).join(",");
     } catch (err) {
-      lastIdentify = { lat: latlng.lat, lng: latlng.lng, name: "" };
-      popup.setContent(`
-        <div class="popup-row">Couldn't look up this address.</div>
-        <a href="#" class="popup-add-btn" id="identify-add-btn">+ Add accessibility info here</a>
-      `);
+      // fall back to generic name below
     }
-  }
 
-  map.on("popupopen", () => {
-    const btn = document.getElementById("identify-add-btn");
-    if (btn) {
-      btn.addEventListener("click", (evt) => {
-        evt.preventDefault();
-        map.closePopup();
-        pendingLatLng = L.latLng(lastIdentify.lat, lastIdentify.lng);
-        openForm();
-        document.getElementById("f-name").value = lastIdentify.name || "";
-      });
-    }
-  });
+    document.getElementById("dp-name").textContent = name;
+    document.getElementById("dp-body").innerHTML = `
+      <div class="dp-status-row">
+        <span class="dp-badge" style="background:${colors.unknown}">No info yet</span>
+      </div>
+      <div class="dp-empty">Nobody has reported accessibility details for this location yet.</div>
+      <button class="dp-action" id="dp-add-btn">+ Add accessibility info</button>
+    `;
+    document.getElementById("dp-add-btn").addEventListener("click", () => {
+      pendingLatLng = latlng;
+      openForm();
+      document.getElementById("f-name").value = name;
+    });
+  }
 
   function openForm() {
     document.getElementById("f-name").value = "";
@@ -480,6 +551,7 @@
     const match = places.find(p => p.name.toLowerCase().includes(query.toLowerCase()));
     if (match) {
       map.setView([match.lat, match.lng], 17);
+      showPlacePanel(match);
       return;
     }
 
@@ -493,7 +565,7 @@
         const lat = parseFloat(results[0].lat);
         const lng = parseFloat(results[0].lon);
         map.setView([lat, lng], 17);
-        showIdentifyPopup(L.latLng(lat, lng));
+        showIdentifyPanel(L.latLng(lat, lng));
       } else {
         alert("Couldn't find that place in Taiwan. Try a different search term.");
       }
