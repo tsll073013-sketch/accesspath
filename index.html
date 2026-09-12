@@ -191,8 +191,8 @@
 
 <script>
   // ===== FILL THESE IN — see the setup guide, Part 2 =====
-  const SUPABASE_URL = "https://wyiivyygjgedxniqftow.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_kUHh6d0VPeU1GglYhX2X1g_pNhvofzF";
+  const SUPABASE_URL = "PASTE_YOUR_SUPABASE_PROJECT_URL_HERE";
+  const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_ANON_KEY_HERE";
   // ========================================================
 
   const supabaseClient = (SUPABASE_URL.startsWith("http"))
@@ -379,12 +379,59 @@ const SUPABASE_ANON_KEY = "sb_publishable_kUHh6d0VPeU1GglYhX2X1g_pNhvofzF";
   });
 
   map.on("click", (e) => {
-    if (!addMode) return;
-    pendingLatLng = e.latlng;
-    addMode = false;
-    addBtn.classList.remove("active");
-    hintBanner.style.display = "none";
-    openForm();
+    if (addMode) {
+      pendingLatLng = e.latlng;
+      addMode = false;
+      addBtn.classList.remove("active");
+      hintBanner.style.display = "none";
+      openForm();
+    } else {
+      showIdentifyPopup(e.latlng);
+    }
+  });
+
+  // ----- Click-to-identify (like tapping a spot on Google Maps) -----
+  let lastIdentify = null;
+
+  async function showIdentifyPopup(latlng) {
+    const popup = L.popup({ maxWidth: 250 })
+      .setLatLng(latlng)
+      .setContent('<div class="popup-row">Looking up this location…</div>')
+      .openOn(map);
+
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}&zoom=18`
+      );
+      const data = await res.json();
+      const name = data.display_name
+        ? data.display_name.split(",").slice(0, 2).join(",")
+        : "Unnamed location";
+      lastIdentify = { lat: latlng.lat, lng: latlng.lng, name };
+      popup.setContent(`
+        <div class="popup-title">${name}</div>
+        <a href="#" class="popup-add-btn" id="identify-add-btn">+ Add accessibility info here</a>
+      `);
+    } catch (err) {
+      lastIdentify = { lat: latlng.lat, lng: latlng.lng, name: "" };
+      popup.setContent(`
+        <div class="popup-row">Couldn't look up this address.</div>
+        <a href="#" class="popup-add-btn" id="identify-add-btn">+ Add accessibility info here</a>
+      `);
+    }
+  }
+
+  map.on("popupopen", () => {
+    const btn = document.getElementById("identify-add-btn");
+    if (btn) {
+      btn.addEventListener("click", (evt) => {
+        evt.preventDefault();
+        map.closePopup();
+        pendingLatLng = L.latLng(lastIdentify.lat, lastIdentify.lng);
+        openForm();
+        document.getElementById("f-name").value = lastIdentify.name || "";
+      });
+    }
   });
 
   function openForm() {
@@ -426,18 +473,35 @@ const SUPABASE_ANON_KEY = "sb_publishable_kUHh6d0VPeU1GglYhX2X1g_pNhvofzF";
   });
 
   // ----- Search -----
-  document.getElementById("search-btn").addEventListener("click", () => {
-    const query = document.getElementById("search-input").value.trim().toLowerCase();
+  document.getElementById("search-btn").addEventListener("click", async () => {
+    const query = document.getElementById("search-input").value.trim();
     if (!query) return;
-    const match = places.find(p => p.name.toLowerCase().includes(query));
+
+    const match = places.find(p => p.name.toLowerCase().includes(query.toLowerCase()));
     if (match) {
       map.setView([match.lat, match.lng], 17);
-    } else {
-      alert("No match found yet in the sample database.");
+      return;
+    }
+
+    // Not in your database yet — search the real world via OpenStreetMap.
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=tw&limit=1`
+      );
+      const results = await res.json();
+      if (results.length > 0) {
+        const lat = parseFloat(results[0].lat);
+        const lng = parseFloat(results[0].lon);
+        map.setView([lat, lng], 17);
+        showIdentifyPopup(L.latLng(lat, lng));
+      } else {
+        alert("Couldn't find that place in Taiwan. Try a different search term.");
+      }
+    } catch (err) {
+      alert("Search failed — check your internet connection and try again.");
     }
   });
 </script>
 
 </body>
 </html>
-
