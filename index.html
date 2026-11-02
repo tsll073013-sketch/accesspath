@@ -1,4 +1,140 @@
-<!DOCTYPE html>
+<!-- 餐廳資訊卡組件 (可直接放入 detail-panel 或 Popup 中) -->
+<div class="restaurant-card">
+  <div class="card-badge-demo">⚠️ 本卡片內容為示意資料</div>
+  
+  <h3 class="card-title">綠洲日光簡餐館 <span class="card-subtitle">（實查原型示範）</span></h3>
+  
+  <div class="card-section">
+    <div class="card-row">
+      <span class="card-icon">🚪</span>
+      <div class="card-content">
+        <b>入口設施</b>
+        正門有階梯；側門設有無障礙坡道
+      </div>
+    </div>
+
+    <div class="card-row">
+      <span class="card-icon">📐</span>
+      <div class="card-content">
+        <b>店內通道</b>
+        主要走道寬度約 95 cm（附通道照片）
+      </div>
+    </div>
+
+    <div class="card-row">
+      <span class="card-icon">🪑</span>
+      <div class="card-content">
+        <b>座位配置</b>
+        部分座椅可移動調整空間
+      </div>
+    </div>
+
+    <div class="card-row">
+      <span class="card-icon">🚻</span>
+      <div class="card-content">
+        <b>洗手間</b>
+        尚未確認
+      </div>
+    </div>
+
+    <div class="card-row notice-box">
+      <span class="card-icon">💡</span>
+      <div class="card-content">
+        <b>使用提醒</b>
+        側門需請店員協助開啟
+      </div>
+    </div>
+  </div>
+
+  <div class="card-footer">
+    最後實查日期：2026 年 11 月 02 日
+  </div>
+</div>
+
+<style>
+  .restaurant-card {
+    background: #fdfcf8;
+    border: 1px solid #d8d3c4;
+    border-radius: 12px;
+    padding: 16px;
+    font-family: -apple-system, "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
+    color: #1c2b28;
+    max-width: 340px;
+    box-shadow: 0 4px 12px rgba(28, 43, 40, 0.08);
+  }
+
+  .card-badge-demo {
+    display: inline-block;
+    background: #d9a441;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin-bottom: 8px;
+  }
+
+  .card-title {
+    margin: 0 0 14px 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #1c2b28;
+  }
+
+  .card-subtitle {
+    font-size: 13px;
+    font-weight: normal;
+    color: #7a7565;
+  }
+
+  .card-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border-top: 1px solid #d8d3c4;
+    padding-top: 12px;
+  }
+
+  .card-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13.5px;
+    line-height: 1.4;
+  }
+
+  .card-icon {
+    font-size: 15px;
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .card-content b {
+    display: block;
+    font-size: 11.5px;
+    color: #3d6b5c;
+    letter-spacing: 0.03em;
+    margin-bottom: 2px;
+  }
+
+  .notice-box {
+    background: rgba(217, 164, 65, 0.12);
+    border-left: 3px solid #d9a441;
+    padding: 8px 10px;
+    border-radius: 4px;
+    margin-top: 4px;
+  }
+
+  .card-footer {
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px dashed #d8d3c4;
+    font-size: 11.5px;
+    color: #b7b2a3;
+    text-align: right;
+  }
+</style><!DOCTYPE html>
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8" />
