@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-TW">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>AccessPath Taiwan — Find accessible places</title>
+<title>AccessPath Taiwan — 尋找無障礙地點</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
@@ -24,7 +24,7 @@
 
   body {
     margin: 0;
-    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-family: -apple-system, "BlinkMacSystemFont", "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang TC", "Microsoft JhengHei", sans-serif;
     color: var(--ink);
     background: var(--paper);
   }
@@ -68,8 +68,7 @@
 
   #map { height: calc(100vh - 64px); width: 100%; }
 
-  /* Mutes the base map's default colors/icons so it reads as background
-     context (roads, place names) rather than competing with your markers. */
+  /* 降低底圖預設色彩與圖示飽和度，凸顯自訂標記 */
   .leaflet-tile-pane {
     filter: grayscale(55%) brightness(1.12) contrast(0.9) saturate(0.7);
   }
@@ -90,7 +89,7 @@
     display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px;
   }
 
-  /* Slide-in detail panel, like tapping a place on Google Maps */
+  /* 滑入式詳細資訊面板 */
   #detail-panel {
     position: absolute;
     z-index: 700;
@@ -130,7 +129,7 @@
   #detail-panel .dp-section { padding: 10px 16px; border-top: 1px solid var(--line); }
   #detail-panel .dp-row { display: flex; gap: 10px; font-size: 13.5px; margin: 8px 0; color: #3c392f; }
   #detail-panel .dp-row .dp-icon { width: 18px; flex-shrink: 0; text-align: center; }
-  #detail-panel .dp-row b { display: block; color: var(--ink); font-size: 12px; text-transform: uppercase; letter-spacing: 0.02em; margin-bottom: 1px; }
+  #detail-panel .dp-row b { display: block; color: var(--ink); font-size: 12px; letter-spacing: 0.02em; margin-bottom: 1px; }
   #detail-panel .dp-updated { padding: 8px 16px 4px; font-size: 11.5px; color: var(--unknown); }
   #detail-panel .dp-notes { padding: 0 16px 12px; font-size: 12.5px; font-style: italic; color: #7a7565; }
   #detail-panel .dp-action {
@@ -161,7 +160,7 @@
   .popup-updated { margin-top: 8px; font-size: 11.5px; color: var(--unknown); }
   .popup-note { margin-top: 8px; font-size: 11px; color: var(--unknown); font-style: italic; }
 
-  /* Modal form */
+  /* 彈出式表單 Modal */
   #overlay {
     display: none;
     position: fixed; inset: 0; background: rgba(28,43,40,0.4);
@@ -193,12 +192,12 @@
 <header>
   <div>
     <h1>AccessPath Taiwan</h1>
-    <p>Accessibility details for places in Taipei — added by people who've been there.</p>
+    <p>台北各地點的無障礙設施資訊 — 由親臨現場的使用者共同建置。</p>
   </div>
   <div id="toolbar">
-    <input id="search-input" type="text" placeholder="Search a place" />
-    <button id="search-btn">Search</button>
-    <button id="add-mode-btn" class="primary">+ Add a place</button>
+    <input id="search-input" type="text" placeholder="搜尋地點" />
+    <button id="search-btn">搜尋</button>
+    <button id="add-mode-btn" class="primary">+ 新增地點</button>
   </div>
 </header>
 
@@ -212,44 +211,44 @@
   <div id="dp-body"></div>
 </div>
 
-<div class="hint-banner" id="hint-banner">Click anywhere on the map to drop a pin</div>
+<div class="hint-banner" id="hint-banner">點擊地圖任意位置以放置標記</div>
 
 <div class="legend">
-  <div><span class="dot" style="background:var(--good)"></span>Confirmed accessible</div>
-  <div><span class="dot" style="background:var(--partial)"></span>Partially accessible</div>
-  <div><span class="dot" style="background:var(--unknown)"></span>No info yet</div>
+  <div><span class="dot" style="background:var(--good)"></span>確認無障礙</div>
+  <div><span class="dot" style="background:var(--partial)"></span>部分無障礙</div>
+  <div><span class="dot" style="background:var(--unknown)"></span>尚無資訊</div>
 </div>
 
-<!-- Add/edit place form -->
+<!-- 新增/編輯地點表單 -->
 <div id="overlay">
   <div id="form-card">
-    <h2>Add accessibility info</h2>
-    <p class="sub">This is saved to your sample database and will still be here next time you open this page.</p>
-    <label>Place name</label>
-    <input id="f-name" type="text" placeholder="e.g. Ximending MRT Exit 6" />
-    <label>Overall status</label>
+    <h2>新增無障礙資訊</h2>
+    <p class="sub">資料將儲存至您的範例資料庫，下次開啟此頁面時依然存在。</p>
+    <label>地點名稱</label>
+    <input id="f-name" type="text" placeholder="例如：捷運西門站 6 號出口" />
+    <label>整體無障礙狀況</label>
     <select id="f-status">
-      <option value="good">Confirmed accessible</option>
-      <option value="partial">Partially accessible</option>
-      <option value="unknown">No info yet</option>
+      <option value="good">確認無障礙</option>
+      <option value="partial">部分無障礙</option>
+      <option value="unknown">尚無資訊</option>
     </select>
-    <label>Entrance</label>
-    <input id="f-entrance" type="text" placeholder="e.g. Ramp at side entrance" />
-    <label>Restroom</label>
-    <input id="f-restroom" type="text" placeholder="e.g. Accessible stall on 1F" />
-    <label>Parking</label>
-    <input id="f-parking" type="text" placeholder="e.g. 2 accessible spaces" />
-    <label>Notes</label>
-    <textarea id="f-notes" placeholder="Anything else worth knowing"></textarea>
+    <label>入口設施</label>
+    <input id="f-entrance" type="text" placeholder="例如：側門設有無障礙斜坡" />
+    <label>無障礙廁所</label>
+    <input id="f-restroom" type="text" placeholder="例如：1 樓設有無障礙廁所" />
+    <label>停車設施</label>
+    <input id="f-parking" type="text" placeholder="例如：設有 2 個無障礙車位" />
+    <label>備註說明</label>
+    <textarea id="f-notes" placeholder="其他值得注意的詳細資訊"></textarea>
     <div class="form-actions">
-      <button class="cancel" id="f-cancel">Cancel</button>
-      <button class="primary" id="f-save">Save place</button>
+      <button class="cancel" id="f-cancel">取消</button>
+      <button class="primary" id="f-save">儲存地點</button>
     </div>
   </div>
 </div>
 
 <script>
-  // ===== FILL THESE IN — see the setup guide, Part 2 =====
+  // ===== 請填入以下資訊 — 參閱設定指南第 2 部分 =====
   const SUPABASE_URL = "PASTE_YOUR_SUPABASE_PROJECT_URL_HERE";
   const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_ANON_KEY_HERE";
   // ========================================================
@@ -260,429 +259,4 @@
 
   const colors = { good: "#4a8f6f", partial: "#d9a441", unknown: "#b7b2a3" };
 
-  // ----- Seed data: real Taipei landmarks, PLACEHOLDER accessibility details for demo only -----
-  const seedPlaces = [
-    {
-      id: "seed-1",
-      name: "Taipei 101",
-      lat: 25.0339, lng: 121.5645,
-      status: "good",
-      entrance: "Step-free main entrance, automatic doors",
-      restroom: "Accessible restroom on B1 and observatory floor",
-      parking: "Accessible parking in basement garage",
-      notes: "Demo data — not yet verified.",
-      lastUpdated: "2026-08-14"
-    },
-    {
-      id: "seed-2",
-      name: "Chiang Kai-Shek Memorial Hall",
-      lat: 25.0347, lng: 121.5216,
-      status: "good",
-      entrance: "Ramp access at main plaza level",
-      restroom: "Accessible restroom near main hall",
-      parking: "Accessible parking near Liberty Square",
-      notes: "Demo data — not yet verified.",
-      lastUpdated: "2026-07-30"
-    },
-    {
-      id: "seed-3",
-      name: "Ximending Shopping District",
-      lat: 25.0421, lng: 121.5079,
-      status: "partial",
-      entrance: "Mostly step-free, some shops have raised thresholds",
-      restroom: "Public accessible restroom near Red House",
-      parking: "No dedicated accessible parking in pedestrian zone",
-      notes: "Demo data — not yet verified.",
-      lastUpdated: "2026-06-02"
-    },
-    {
-      id: "seed-4",
-      name: "Da'an Forest Park",
-      lat: 25.0264, lng: 121.5352,
-      status: "good",
-      entrance: "Multiple step-free entrances",
-      restroom: "Accessible restrooms at several points in the park",
-      parking: "Accessible parking near MRT exit",
-      notes: "Demo data — not yet verified.",
-      lastUpdated: "2026-08-01"
-    },
-    {
-      id: "seed-5",
-      name: "Taipei Main Station",
-      lat: 25.0478, lng: 121.5170,
-      status: "unknown",
-      entrance: "Not yet reported",
-      restroom: "Not yet reported",
-      parking: "Not yet reported",
-      notes: "",
-      lastUpdated: null
-    }
-  ];
-
-  let places = [];
-  let addMode = false;
-  let pendingLatLng = null;
-
-  function makeIcon(status) {
-    const color = colors[status] || colors.unknown;
-    return L.divIcon({
-      className: "",
-      html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2.5px solid #fdfcf8;box-shadow:0 1px 4px rgba(28,43,40,0.35);"></div>`,
-      iconSize: [14, 14],
-      iconAnchor: [7, 7]
-    });
-  }
-
-  function makeSearchResultIcon() {
-    return L.divIcon({
-      className: "",
-      html: `<div style="width:14px;height:14px;border-radius:50% 50% 50% 0;background:#3d6b5c;transform:rotate(-45deg);border:2px solid #fdfcf8;box-shadow:0 1px 4px rgba(28,43,40,0.4);"></div>`,
-      iconSize: [14, 14],
-      iconAnchor: [7, 12]
-    });
-  }
-
-  const map = L.map("map", { zoomControl: true }).setView([25.0375, 121.535], 13);
-
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-  }).addTo(map);
-
-  let markerLayer = L.layerGroup().addTo(map);
-  let searchResultsLayer = L.layerGroup().addTo(map);
-
-  function renderMarkers() {
-    markerLayer.clearLayers();
-    places.forEach(place => {
-      const marker = L.marker([place.lat, place.lng], { icon: makeIcon(place.status) });
-      marker.on("click", () => showPlacePanel(place));
-      marker.addTo(markerLayer);
-    });
-  }
-
-  const statusLabels = { good: "Confirmed accessible", partial: "Partially accessible", unknown: "No info yet" };
-
-  function showPlacePanel(place) {
-    document.getElementById("dp-name").textContent = place.name;
-    const updatedText = place.lastUpdated
-      ? `Last confirmed ${place.lastUpdated}`
-      : "No reports yet — be the first to add info";
-    const notesHtml = place.notes ? `<div class="dp-notes">${place.notes}</div>` : "";
-    const hasInfo = place.entrance !== "Not yet reported" || place.restroom !== "Not yet reported";
-
-    document.getElementById("dp-body").innerHTML = `
-      <div class="dp-status-row">
-        <span class="dp-badge" style="background:${colors[place.status] || colors.unknown}">${statusLabels[place.status] || statusLabels.unknown}</span>
-      </div>
-      <div class="dp-section">
-        <div class="dp-row"><span class="dp-icon">🚪</span><span><b>Entrance</b>${place.entrance}</span></div>
-        <div class="dp-row"><span class="dp-icon">🚻</span><span><b>Restroom</b>${place.restroom}</span></div>
-        <div class="dp-row"><span class="dp-icon">🅿️</span><span><b>Parking</b>${place.parking}</span></div>
-      </div>
-      <div class="dp-updated">${updatedText}</div>
-      ${notesHtml}
-      <button class="dp-action" id="dp-add-btn">${hasInfo ? "Suggest an update" : "+ Add accessibility info"}</button>
-    `;
-    document.getElementById("dp-add-btn").addEventListener("click", () => {
-      pendingLatLng = L.latLng(place.lat, place.lng);
-      openForm();
-      document.getElementById("f-name").value = place.name;
-    });
-    document.getElementById("detail-panel").classList.add("open");
-    map.panTo([place.lat, place.lng]);
-  }
-
-  document.getElementById("dp-close").addEventListener("click", () => {
-    document.getElementById("detail-panel").classList.remove("open");
-  });
-
-  // ----- Real database (Supabase) -----
-  async function loadPlaces() {
-    if (!supabaseClient) {
-      // Not configured yet — show sample data so the page still works.
-      places = seedPlaces;
-      renderMarkers();
-      return;
-    }
-    const { data, error } = await supabaseClient
-      .from("places")
-      .select("*")
-      .eq("approved", true);
-
-    if (error) {
-      console.error("Could not load places:", error);
-      places = seedPlaces;
-    } else {
-      places = data.map(p => ({
-        id: p.id,
-        name: p.name,
-        lat: p.lat,
-        lng: p.lng,
-        status: p.status,
-        entrance: p.entrance,
-        restroom: p.restroom,
-        parking: p.parking,
-        notes: p.notes,
-        lastUpdated: p.last_updated
-      }));
-    }
-    renderMarkers();
-  }
-
-  async function submitPlace(newPlace) {
-    if (!supabaseClient) {
-      // Not configured yet — just show it locally for preview purposes.
-      places.push(newPlace);
-      renderMarkers();
-      alert("Demo mode: this place is shown locally only. Connect Supabase (see setup guide) to save it for real.");
-      return;
-    }
-    const { error } = await supabaseClient.from("places").insert({
-      name: newPlace.name,
-      lat: newPlace.lat,
-      lng: newPlace.lng,
-      status: newPlace.status,
-      entrance: newPlace.entrance,
-      restroom: newPlace.restroom,
-      parking: newPlace.parking,
-      notes: newPlace.notes,
-      last_updated: newPlace.lastUpdated,
-      approved: false
-    });
-    if (error) {
-      console.error("Could not save place:", error);
-      alert("Something went wrong saving this place. Check the browser console for details.");
-      return;
-    }
-    alert("Thanks! Your submission is saved and will appear once it's reviewed.");
-  }
-
-  loadPlaces();
-
-  // ----- Add-a-place flow -----
-  const addBtn = document.getElementById("add-mode-btn");
-  const hintBanner = document.getElementById("hint-banner");
-  const overlay = document.getElementById("overlay");
-
-  addBtn.addEventListener("click", () => {
-    addMode = !addMode;
-    addBtn.classList.toggle("active", addMode);
-    hintBanner.style.display = addMode ? "block" : "none";
-  });
-
-  map.on("click", (e) => {
-    if (addMode) {
-      pendingLatLng = e.latlng;
-      addMode = false;
-      addBtn.classList.remove("active");
-      hintBanner.style.display = "none";
-      openForm();
-    } else {
-      showIdentifyPanel(e.latlng);
-    }
-  });
-
-  // ----- Click-to-identify (like tapping a spot on Google Maps) -----
-  function renderEmptyPanel(name, latlng, addressLine) {
-    document.getElementById("dp-name").textContent = name;
-    const addressHtml = addressLine ? `<div class="dp-empty" style="padding-bottom:0;">${addressLine}</div>` : "";
-    document.getElementById("dp-body").innerHTML = `
-      <div class="dp-status-row">
-        <span class="dp-badge" style="background:${colors.unknown}">No info yet</span>
-      </div>
-      ${addressHtml}
-      <div class="dp-empty">Nobody has reported accessibility details for this location yet.</div>
-      <button class="dp-action" id="dp-add-btn">+ Add accessibility info</button>
-    `;
-    document.getElementById("dp-add-btn").addEventListener("click", () => {
-      pendingLatLng = latlng;
-      openForm();
-      document.getElementById("f-name").value = name;
-    });
-    document.getElementById("detail-panel").classList.add("open");
-  }
-
-  async function showIdentifyPanel(latlng) {
-    document.getElementById("dp-name").textContent = "Looking up…";
-    document.getElementById("dp-body").innerHTML = "";
-    document.getElementById("detail-panel").classList.add("open");
-
-    let name = "Unnamed location";
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}&zoom=18`
-      );
-      const data = await res.json();
-      if (data.display_name) name = data.display_name.split(",").slice(0, 2).join(",");
-    } catch (err) {
-      // fall back to generic name below
-    }
-
-    renderEmptyPanel(name, latlng);
-  }
-
-  function openForm() {
-    document.getElementById("f-name").value = "";
-    document.getElementById("f-status").value = "unknown";
-    document.getElementById("f-entrance").value = "";
-    document.getElementById("f-restroom").value = "";
-    document.getElementById("f-parking").value = "";
-    document.getElementById("f-notes").value = "";
-    overlay.style.display = "flex";
-  }
-
-  document.getElementById("f-cancel").addEventListener("click", () => {
-    overlay.style.display = "none";
-    pendingLatLng = null;
-  });
-
-  document.getElementById("f-save").addEventListener("click", async () => {
-    const name = document.getElementById("f-name").value.trim();
-    if (!name || !pendingLatLng) {
-      alert("Please enter a place name.");
-      return;
-    }
-    const newPlace = {
-      id: "place-" + Date.now(),
-      name,
-      lat: pendingLatLng.lat,
-      lng: pendingLatLng.lng,
-      status: document.getElementById("f-status").value,
-      entrance: document.getElementById("f-entrance").value.trim() || "Not specified",
-      restroom: document.getElementById("f-restroom").value.trim() || "Not specified",
-      parking: document.getElementById("f-parking").value.trim() || "Not specified",
-      notes: document.getElementById("f-notes").value.trim(),
-      lastUpdated: new Date().toISOString().slice(0, 10)
-    };
-    await submitPlace(newPlace);
-    overlay.style.display = "none";
-    pendingLatLng = null;
-  });
-
-  // ----- Search -----
-  // ----- Distance helper for de-duplicating search results against your own data -----
-  function metersBetween(lat1, lng1, lat2, lng2) {
-    const R = 6371000;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLng = (lng2 - lng1) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) ** 2 +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  }
-
-  // ----- Real place/business search (e.g. "7-Eleven", "Wenshan Park") -----
-  // Uses OpenStreetMap's Overpass API to find every matching named place
-  // near the current map view, the same way Google shows every branch of
-  // a chain when you search its name.
-  async function searchPOIs(query) {
-    const center = map.getCenter();
-    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const overpassQuery = `[out:json][timeout:25];(node["name"~"${escaped}",i](around:5000,${center.lat},${center.lng});way["name"~"${escaped}",i](around:5000,${center.lat},${center.lng}););out center 40;`;
-
-    const res = await fetch("https://overpass-api.de/api/interpreter", {
-      method: "POST",
-      body: "data=" + encodeURIComponent(overpassQuery)
-    });
-    const data = await res.json();
-
-    return data.elements
-      .map(el => {
-        const lat = el.lat || (el.center && el.center.lat);
-        const lng = el.lon || (el.center && el.center.lon);
-        const name = el.tags && el.tags.name;
-        if (!lat || !lng || !name) return null;
-        const addrParts = [el.tags["addr:city"], el.tags["addr:district"], el.tags["addr:street"], el.tags["addr:housenumber"]].filter(Boolean);
-        return { name, lat, lng, address: addrParts.join(" ") };
-      })
-      .filter(Boolean);
-  }
-
-  function showPOIPanel(poi) {
-    // If this real-world place already has accessibility info in your
-    // database (matched by name + closeness), show that instead of "no info".
-    const existing = places.find(p =>
-      p.name.toLowerCase() === poi.name.toLowerCase() &&
-      metersBetween(p.lat, p.lng, poi.lat, poi.lng) < 60
-    );
-    if (existing) {
-      showPlacePanel(existing);
-    } else {
-      renderEmptyPanel(poi.name, L.latLng(poi.lat, poi.lng), poi.address);
-    }
-  }
-
-  document.getElementById("search-btn").addEventListener("click", async () => {
-    const query = document.getElementById("search-input").value.trim();
-    if (!query) return;
-
-    searchResultsLayer.clearLayers();
-
-    // 1. Check places already in your own database (can be several, e.g.
-    //    if you've logged more than one branch of the same chain).
-    const localMatches = places.filter(p => p.name.toLowerCase().includes(query.toLowerCase()));
-
-    // 2. Also search the real world for every matching named place nearby.
-    let poiMatches = [];
-    try {
-      poiMatches = await searchPOIs(query);
-    } catch (err) {
-      console.error("Place search failed:", err);
-    }
-
-    // Don't show a duplicate pin for a POI that's already one of your own entries.
-    const newPOIs = poiMatches.filter(poi =>
-      !localMatches.some(p => metersBetween(p.lat, p.lng, poi.lat, poi.lng) < 60)
-    );
-
-    newPOIs.forEach(poi => {
-      const marker = L.marker([poi.lat, poi.lng], { icon: makeSearchResultIcon() });
-      marker.on("click", () => showPOIPanel(poi));
-      marker.addTo(searchResultsLayer);
-    });
-
-    const totalResults = localMatches.length + newPOIs.length;
-
-    if (totalResults === 0) {
-      // 3. Last resort: treat it as a specific address rather than a place name.
-      try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=tw&limit=1`
-        );
-        const results = await res.json();
-        if (results.length > 0) {
-          const lat = parseFloat(results[0].lat);
-          const lng = parseFloat(results[0].lon);
-          map.setView([lat, lng], 17);
-          showIdentifyPanel(L.latLng(lat, lng));
-        } else {
-          alert("Couldn't find that place in Taiwan. Try a different search term.");
-        }
-      } catch (err) {
-        alert("Search failed — check your internet connection and try again.");
-      }
-      return;
-    }
-
-    if (totalResults === 1) {
-      if (localMatches.length === 1) {
-        map.setView([localMatches[0].lat, localMatches[0].lng], 17);
-        showPlacePanel(localMatches[0]);
-      } else {
-        map.setView([newPOIs[0].lat, newPOIs[0].lng], 17);
-        showPOIPanel(newPOIs[0]);
-      }
-      return;
-    }
-
-    // Multiple results — zoom to fit all of them; the person clicks the one they want.
-    const allCoords = [
-      ...localMatches.map(p => [p.lat, p.lng]),
-      ...newPOIs.map(p => [p.lat, p.lng])
-    ];
-    map.fitBounds(allCoords, { padding: [60, 60], maxZoom: 16 });
-  });
-</script>
-
-</body>
-</html>
+  // ----- 預設種子資料：台北
