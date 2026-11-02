@@ -1,145 +1,9 @@
-<!-- 餐廳資訊卡組件 (可直接放入 detail-panel 或 Popup 中) -->
-<div class="restaurant-card">
-  <div class="card-badge-demo">⚠️ 本卡片內容為示意資料</div>
-  
-  <h3 class="card-title">綠洲日光簡餐館 <span class="card-subtitle">（實查原型示範）</span></h3>
-  
-  <div class="card-section">
-    <div class="card-row">
-      <span class="card-icon">🚪</span>
-      <div class="card-content">
-        <b>入口設施</b>
-        正門有階梯；側門設有無障礙坡道
-      </div>
-    </div>
-
-    <div class="card-row">
-      <span class="card-icon">📐</span>
-      <div class="card-content">
-        <b>店內通道</b>
-        主要走道寬度約 95 cm（附通道照片）
-      </div>
-    </div>
-
-    <div class="card-row">
-      <span class="card-icon">🪑</span>
-      <div class="card-content">
-        <b>座位配置</b>
-        部分座椅可移動調整空間
-      </div>
-    </div>
-
-    <div class="card-row">
-      <span class="card-icon">🚻</span>
-      <div class="card-content">
-        <b>洗手間</b>
-        尚未確認
-      </div>
-    </div>
-
-    <div class="card-row notice-box">
-      <span class="card-icon">💡</span>
-      <div class="card-content">
-        <b>使用提醒</b>
-        側門需請店員協助開啟
-      </div>
-    </div>
-  </div>
-
-  <div class="card-footer">
-    最後實查日期：2026 年 11 月 02 日
-  </div>
-</div>
-
-<style>
-  .restaurant-card {
-    background: #fdfcf8;
-    border: 1px solid #d8d3c4;
-    border-radius: 12px;
-    padding: 16px;
-    font-family: -apple-system, "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
-    color: #1c2b28;
-    max-width: 340px;
-    box-shadow: 0 4px 12px rgba(28, 43, 40, 0.08);
-  }
-
-  .card-badge-demo {
-    display: inline-block;
-    background: #d9a441;
-    color: #ffffff;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 12px;
-    margin-bottom: 8px;
-  }
-
-  .card-title {
-    margin: 0 0 14px 0;
-    font-size: 18px;
-    font-weight: 700;
-    color: #1c2b28;
-  }
-
-  .card-subtitle {
-    font-size: 13px;
-    font-weight: normal;
-    color: #7a7565;
-  }
-
-  .card-section {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    border-top: 1px solid #d8d3c4;
-    padding-top: 12px;
-  }
-
-  .card-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    font-size: 13.5px;
-    line-height: 1.4;
-  }
-
-  .card-icon {
-    font-size: 15px;
-    width: 20px;
-    text-align: center;
-    flex-shrink: 0;
-  }
-
-  .card-content b {
-    display: block;
-    font-size: 11.5px;
-    color: #3d6b5c;
-    letter-spacing: 0.03em;
-    margin-bottom: 2px;
-  }
-
-  .notice-box {
-    background: rgba(217, 164, 65, 0.12);
-    border-left: 3px solid #d9a441;
-    padding: 8px 10px;
-    border-radius: 4px;
-    margin-top: 4px;
-  }
-
-  .card-footer {
-    margin-top: 14px;
-    padding-top: 10px;
-    border-top: 1px dashed #d8d3c4;
-    font-size: 11.5px;
-    color: #b7b2a3;
-    text-align: right;
-  }
-</style><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>無礙導航：行動友善餐廳地圖</title>
+<title>無礙導航：行動友善餐廳地圖 — 無界同行</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
@@ -210,7 +74,6 @@
     z-index: 1;
   }
 
-  /* 降低底圖預設色彩與圖示飽和度，凸顯自訂標記 */
   .leaflet-tile-pane {
     filter: grayscale(55%) brightness(1.12) contrast(0.9) saturate(0.7);
   }
@@ -231,13 +94,13 @@
     display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px;
   }
 
-  /* 滑入式詳細資訊面板 */
+  /* 滑入式餐廳資訊卡面板 */
   #detail-panel {
     position: absolute;
     z-index: 700;
     top: 16px;
     left: 12px;
-    width: 320px;
+    width: 330px;
     max-width: 85vw;
     max-height: calc(100vh - 100px);
     overflow-y: auto;
@@ -261,21 +124,41 @@
     font-size: 18px; color: var(--unknown); line-height: 1;
     padding: 2px 4px;
   }
-  #detail-panel .dp-status-row { padding: 2px 16px 12px; }
+  
+  /* 餐廳資訊卡核心樣式 */
+  .card-badge-demo {
+    display: inline-block;
+    background: #d9a441;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin: 0 16px 6px;
+  }
+  #detail-panel .dp-status-row { padding: 2px 16px 10px; }
   #detail-panel .dp-badge {
     display: inline-block;
     font-size: 12px; font-weight: 600;
     padding: 3px 10px; border-radius: 20px;
     color: white;
   }
-  #detail-panel .dp-section { padding: 10px 16px; border-top: 1px solid var(--line); }
-  #detail-panel .dp-row { display: flex; gap: 10px; font-size: 13.5px; margin: 8px 0; color: #3c392f; }
-  #detail-panel .dp-row .dp-icon { width: 18px; flex-shrink: 0; text-align: center; }
-  #detail-panel .dp-row b { display: block; color: var(--ink); font-size: 12px; letter-spacing: 0.02em; margin-bottom: 1px; }
-  #detail-panel .dp-updated { padding: 8px 16px 4px; font-size: 11.5px; color: var(--unknown); }
+  #detail-panel .dp-section { padding: 10px 16px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+  #detail-panel .dp-row { display: flex; gap: 10px; font-size: 13.5px; line-height: 1.4; color: #3c392f; }
+  #detail-panel .dp-row .dp-icon { width: 18px; flex-shrink: 0; text-align: center; font-size: 15px; }
+  #detail-panel .dp-row b { display: block; color: var(--accent); font-size: 11.5px; letter-spacing: 0.02em; margin-bottom: 2px; }
+  
+  .notice-box {
+    background: rgba(217, 164, 65, 0.12);
+    border-left: 3px solid #d9a441;
+    padding: 8px 10px;
+    border-radius: 4px;
+  }
+  
+  #detail-panel .dp-updated { padding: 8px 16px 4px; font-size: 11.5px; color: var(--unknown); text-align: right; }
   #detail-panel .dp-notes { padding: 0 16px 12px; font-size: 12.5px; font-style: italic; color: #7a7565; }
   #detail-panel .dp-action {
-    display: block; margin: 4px 16px 16px;
+    display: block; margin: 8px 16px 16px;
     text-align: center; padding: 9px; border-radius: 7px;
     background: var(--accent); color: white; font-size: 13.5px;
     text-decoration: none; cursor: pointer; border: none; width: calc(100% - 32px);
@@ -304,7 +187,8 @@
   }
   #form-card {
     background: white; border-radius: 10px; padding: 22px 24px;
-    width: 340px; max-width: 90vw; box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+    width: 360px; max-width: 90vw; box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+    max-height: 90vh; overflow-y: auto;
   }
   #form-card h2 { font-size: 16px; margin: 0 0 4px; }
   #form-card p.sub { font-size: 12.5px; color: #7a7565; margin: 0 0 14px; }
@@ -331,9 +215,9 @@
     <p>無界同行</p>
   </div>
   <div id="toolbar">
-    <input id="search-input" type="text" placeholder="搜尋地點" />
+    <input id="search-input" type="text" placeholder="搜尋餐廳或地點" />
     <button id="search-btn">搜尋</button>
-    <button id="add-mode-btn" class="primary">+ 新增地點</button>
+    <button id="add-mode-btn" class="primary">+ 新增餐廳</button>
   </div>
 </header>
 
@@ -347,7 +231,7 @@
   <div id="dp-body"></div>
 </div>
 
-<div class="hint-banner" id="hint-banner">點擊地圖任意位置以放置標記</div>
+<div class="hint-banner" id="hint-banner">點擊地圖任意位置以放置餐廳標記</div>
 
 <div class="legend">
   <div><span class="dot" style="background:var(--good)"></span>確認無障礙</div>
@@ -358,38 +242,49 @@
 <!-- 新增/編輯地點表單 -->
 <div id="overlay">
   <div id="form-card">
-    <h2>新增無障礙資訊</h2>
-    <p class="sub">資料將儲存至您的範例資料庫，下次開啟此頁面時依然存在。</p>
-    <label>地點名稱</label>
-    <input id="f-name" type="text" placeholder="例如：捷運西門站 6 號出口" />
+    <h2>新增餐廳無障礙資訊</h2>
+    <p class="sub">資料將儲存至您的範例資料庫，提供同好參考。</p>
+    
+    <label>餐廳名稱</label>
+    <input id="f-name" type="text" placeholder="例如：綠洲日光簡餐館" />
+    
     <label>整體無障礙狀況</label>
     <select id="f-status">
       <option value="good">確認無障礙</option>
       <option value="partial">部分無障礙</option>
       <option value="unknown">尚無資訊</option>
     </select>
+    
     <label>入口設施</label>
-    <input id="f-entrance" type="text" placeholder="例如：側門設有無障礙斜坡" />
-    <label>無障礙廁所</label>
-    <input id="f-restroom" type="text" placeholder="例如：1 樓設有無障礙廁所" />
-    <label>停車設施</label>
-    <input id="f-parking" type="text" placeholder="例如：設有 2 個無障礙車位" />
+    <input id="f-entrance" type="text" placeholder="例如：正門有階梯；側門設有坡道" />
+    
+    <label>店內通道及寬度</label>
+    <input id="f-interior" type="text" placeholder="例如：主要走道寬度約 95 cm（附通道照片）" />
+
+    <label>座位配置</label>
+    <input id="f-seating" type="text" placeholder="例如：部分座椅可移動" />
+    
+    <label>洗手間</label>
+    <input id="f-restroom" type="text" placeholder="例如：設有無障礙洗手間 / 尚未確認" />
+
+    <label>使用提醒</label>
+    <input id="f-notice" type="text" placeholder="例如：側門需請店員開啟" />
+    
     <label>備註說明</label>
-    <textarea id="f-notes" placeholder="其他值得注意的詳細資訊"></textarea>
+    <textarea id="f-notes" placeholder="其他實查心得或補充資訊"></textarea>
+    
     <div class="form-actions">
       <button class="cancel" id="f-cancel">取消</button>
-      <button class="primary" id="f-save">儲存地點</button>
+      <button class="primary" id="f-save">儲存餐廳資訊</button>
     </div>
   </div>
 </div>
 
 <script>
   window.addEventListener('DOMContentLoaded', () => {
-    // ===== 請填入 Supabase 專案資訊 =====
     const SUPABASE_URL = "PASTE_YOUR_SUPABASE_PROJECT_URL_HERE";
     const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_ANON_KEY_HERE";
 
-    // 安全檢查 Supabase 套件，避免 CDN 載入失敗導致 JS 卡死
     const supabaseClient = (typeof supabase !== "undefined" && SUPABASE_URL.startsWith("http"))
       ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
       : null;
@@ -401,62 +296,49 @@
       return;
     }
 
-    // 預設示範資料
+    // ===== 全新餐廳實查原型與示範資料庫 =====
     const seedPlaces = [
       {
         id: "seed-1",
-        name: "台北 101",
+        name: "綠洲日光簡餐館",
         lat: 25.0339, lng: 121.5645,
-        status: "good",
-        entrance: "主要入口無階梯，設有自動門",
-        restroom: "B1 及觀景台樓層設有無障礙廁所",
-        parking: "地下停車場設有無障礙停車位",
-        notes: "示範資料 — 尚未實地驗證。",
-        lastUpdated: "2026-08-14"
+        status: "partial",
+        entrance: "正門有階梯；側門設有坡道",
+        interior: "主要走道寬度約 95 cm（附通道照片）",
+        seating: "部分座椅可移動",
+        restroom: "尚未確認",
+        notice: "側門需請店員開啟",
+        notes: "門口與動線整體良好，建議熱門時段避開人潮。",
+        lastUpdated: "2026年11月02日",
+        isDemo: true
       },
       {
         id: "seed-2",
-        name: "中正紀念堂",
-        lat: 25.0347, lng: 121.5216,
+        name: "溫木蔬食廚房",
+        lat: 25.0421, lng: 121.5079,
         status: "good",
-        entrance: "主廣場層設有無障礙斜坡道",
-        restroom: "主堂體附近設有無障礙廁所",
-        parking: "自由廣場附近設有無障礙停車位",
-        notes: "示範資料 — 尚未實地驗證。",
-        lastUpdated: "2026-07-30"
+        entrance: "入口平坦無階梯，設有自動滑門（門寬 110 cm）",
+        interior: "主通道寬敞（>120 cm），地板平整防滑",
+        seating: "全區座椅彈性可拆移，桌高 75 cm 適合輪椅使用",
+        restroom: "設有獨立無障礙洗手間，附雙向扶手及求救按鈕",
+        notice: "熱門時段人潮較多，建議預先電話告知保留無障礙座位",
+        notes: "完全符合友善標準，店員態度親切。",
+        lastUpdated: "2026年10月15日",
+        isDemo: false
       },
       {
         id: "seed-3",
-        name: "西門町商圈",
-        lat: 25.0421, lng: 121.5079,
+        name: "轉角老宅咖啡館",
+        lat: 25.0347, lng: 121.5216,
         status: "partial",
-        entrance: "多數路段無階梯，部分店家有高起門檻",
-        restroom: "西門紅樓附近設有公用無障礙廁所",
-        parking: "行人徒步區內無專用無障礙停車位",
-        notes: "示範資料 — 尚未實地驗證。",
-        lastUpdated: "2026-06-02"
-      },
-      {
-        id: "seed-4",
-        name: "大安森林公園",
-        lat: 25.0264, lng: 121.5352,
-        status: "good",
-        entrance: "設有多處無障礙平坦入口",
-        restroom: "園區內多處設有無障礙廁所",
-        parking: "捷運出口附近設有無障礙停車位",
-        notes: "示範資料 — 尚未實地驗證。",
-        lastUpdated: "2026-08-01"
-      },
-      {
-        id: "seed-5",
-        name: "台北車站",
-        lat: 25.0478, lng: 121.5170,
-        status: "unknown",
-        entrance: "尚無回報",
-        restroom: "尚無回報",
-        parking: "尚無回報",
-        notes: "",
-        lastUpdated: null
+        entrance: "正門有 1 階台階（約 15 cm），備有活動斜坡板",
+        interior: "走道最窄處約 80 cm，轉彎需稍微留意",
+        seating: "靠窗區為可移動式單椅，靠牆為固定式沙發",
+        restroom: "洗手間門口有高低差，非無障礙廁所",
+        notice: "需使用斜坡板請先致電或請工作人員協助鋪設",
+        notes: "老宅改造空間較緊湊，輪椅進出需服務人員協助。",
+        lastUpdated: "2026年09月20日",
+        isDemo: false
       }
     ];
 
@@ -483,7 +365,6 @@
       });
     }
 
-    // 初始化地圖
     const map = L.map("map", { zoomControl: true }).setView([25.0375, 121.535], 13);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -491,7 +372,6 @@
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> 貢獻者'
     }).addTo(map);
 
-    // 強制更新地圖尺寸校正
     setTimeout(() => { map.invalidateSize(); }, 250);
 
     let markerLayer = L.layerGroup().addTo(map);
@@ -508,27 +388,39 @@
 
     const statusLabels = { good: "確認無障礙", partial: "部分無障礙", unknown: "尚無資訊" };
 
+    // 渲染完整的餐廳無障礙資訊卡
     function showPlacePanel(place) {
       document.getElementById("dp-name").textContent = place.name;
+      
+      const demoBadge = place.isDemo ? `<div class="card-badge-demo">⚠️ 本卡片內容為示意資料</div>` : "";
       const updatedText = place.lastUpdated
-        ? `最近確認日期：${place.lastUpdated}`
-        : "尚無回報紀錄 — 成為第一個新增資訊的人吧";
+        ? `最後實查日期：${place.lastUpdated}`
+        : "尚無實查紀錄 — 成為第一個回報的人吧";
+      
       const notesHtml = place.notes ? `<div class="dp-notes">${place.notes}</div>` : "";
-      const hasInfo = place.entrance !== "尚無回報" || place.restroom !== "尚無回報";
+      const noticeHtml = place.notice ? `
+        <div class="dp-row notice-box">
+          <span class="dp-icon">💡</span>
+          <div><b>使用提醒</b>${place.notice}</div>
+        </div>` : "";
 
       document.getElementById("dp-body").innerHTML = `
+        ${demoBadge}
         <div class="dp-status-row">
           <span class="dp-badge" style="background:${colors[place.status] || colors.unknown}">${statusLabels[place.status] || statusLabels.unknown}</span>
         </div>
         <div class="dp-section">
-          <div class="dp-row"><span class="dp-icon">🚪</span><span><b>入口設施</b>${place.entrance}</span></div>
-          <div class="dp-row"><span class="dp-icon">🚻</span><span><b>無障礙廁所</b>${place.restroom}</span></div>
-          <div class="dp-row"><span class="dp-icon">🅿️</span><span><b>停車設施</b>${place.parking}</span></div>
+          <div class="dp-row"><span class="dp-icon">🚪</span><div><b>入口設施</b>${place.entrance || "未說明"}</div></div>
+          <div class="dp-row"><span class="dp-icon">📐</span><div><b>店內通道</b>${place.interior || "未說明"}</div></div>
+          <div class="dp-row"><span class="dp-icon">🪑</span><div><b>座位配置</b>${place.seating || "未說明"}</div></div>
+          <div class="dp-row"><span class="dp-icon">🚻</span><div><b>洗手間</b>${place.restroom || "未說明"}</div></div>
+          ${noticeHtml}
         </div>
         <div class="dp-updated">${updatedText}</div>
         ${notesHtml}
-        <button class="dp-action" id="dp-add-btn">${hasInfo ? "提供更新建議" : "+ 新增無障礙資訊"}</button>
+        <button class="dp-action" id="dp-add-btn">提供實查建議 / 更新資訊</button>
       `;
+
       document.getElementById("dp-add-btn").addEventListener("click", () => {
         pendingLatLng = L.latLng(place.lat, place.lng);
         openForm();
@@ -564,10 +456,13 @@
           lng: p.lng,
           status: p.status,
           entrance: p.entrance,
+          interior: p.interior,
+          seating: p.seating,
           restroom: p.restroom,
-          parking: p.parking,
+          notice: p.notice,
           notes: p.notes,
-          lastUpdated: p.last_updated
+          lastUpdated: p.last_updated,
+          isDemo: p.is_demo || false
         }));
       }
       renderMarkers();
@@ -577,7 +472,7 @@
       if (!supabaseClient) {
         places.push(newPlace);
         renderMarkers();
-        alert("示範模式：此地點僅於本地端暫存顯示。請連接 Supabase 以正式儲存至雲端。");
+        alert("示範模式：此餐廳資訊僅於本地端暫存顯示。");
         return;
       }
       const { error } = await supabaseClient.from("places").insert({
@@ -586,18 +481,20 @@
         lng: newPlace.lng,
         status: newPlace.status,
         entrance: newPlace.entrance,
+        interior: newPlace.interior,
+        seating: newPlace.seating,
         restroom: newPlace.restroom,
-        parking: newPlace.parking,
+        notice: newPlace.notice,
         notes: newPlace.notes,
         last_updated: newPlace.lastUpdated,
         approved: false
       });
       if (error) {
         console.error("無法儲存地點：", error);
-        alert("儲存地點時發生錯誤，詳情請查看瀏覽器主控台（Console）。");
+        alert("儲存地點時發生錯誤，請檢查主控台。");
         return;
       }
-      alert("感謝您！您的提交已成功儲存，審核通過後將會對外顯示。");
+      alert("感謝您！實查資料已提交。");
     }
 
     loadPlaces();
@@ -629,11 +526,11 @@
       const addressHtml = addressLine ? `<div class="dp-empty" style="padding-bottom:0;">${addressLine}</div>` : "";
       document.getElementById("dp-body").innerHTML = `
         <div class="dp-status-row">
-          <span class="dp-badge" style="background:${colors.unknown}">尚無資訊</span>
+          <span class="dp-badge" style="background:${colors.unknown}">尚無實查資訊</span>
         </div>
         ${addressHtml}
-        <div class="dp-empty">目前尚無人回報此地點的無障礙詳細資訊。</div>
-        <button class="dp-action" id="dp-add-btn">+ 新增無障礙資訊</button>
+        <div class="dp-empty">目前尚無人回報這間餐廳的無障礙詳細資訊。</div>
+        <button class="dp-action" id="dp-add-btn">+ 新增餐廳無障礙資訊</button>
       `;
       document.getElementById("dp-add-btn").addEventListener("click", () => {
         pendingLatLng = latlng;
@@ -648,7 +545,7 @@
       document.getElementById("dp-body").innerHTML = "";
       document.getElementById("detail-panel").classList.add("open");
 
-      let name = "未命名地點";
+      let name = "未命名餐廳/地點";
       try {
         const res = await fetch(
           `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}&zoom=18`
@@ -664,8 +561,10 @@
       document.getElementById("f-name").value = "";
       document.getElementById("f-status").value = "unknown";
       document.getElementById("f-entrance").value = "";
+      document.getElementById("f-interior").value = "";
+      document.getElementById("f-seating").value = "";
       document.getElementById("f-restroom").value = "";
-      document.getElementById("f-parking").value = "";
+      document.getElementById("f-notice").value = "";
       document.getElementById("f-notes").value = "";
       overlay.style.display = "flex";
     }
@@ -678,9 +577,13 @@
     document.getElementById("f-save").addEventListener("click", async () => {
       const name = document.getElementById("f-name").value.trim();
       if (!name || !pendingLatLng) {
-        alert("請輸入地點名稱。");
+        alert("請輸入餐廳名稱。");
         return;
       }
+
+      const today = new Date();
+      const formattedDate = `${today.getFullYear()}年${String(today.getMonth() + 1).padStart(2, '0')}月${String(today.getDate()).padStart(2, '0')}日`;
+
       const newPlace = {
         id: "place-" + Date.now(),
         name,
@@ -688,10 +591,13 @@
         lng: pendingLatLng.lng,
         status: document.getElementById("f-status").value,
         entrance: document.getElementById("f-entrance").value.trim() || "未說明",
+        interior: document.getElementById("f-interior").value.trim() || "未說明",
+        seating: document.getElementById("f-seating").value.trim() || "未說明",
         restroom: document.getElementById("f-restroom").value.trim() || "未說明",
-        parking: document.getElementById("f-parking").value.trim() || "未說明",
+        notice: document.getElementById("f-notice").value.trim(),
         notes: document.getElementById("f-notes").value.trim(),
-        lastUpdated: new Date().toISOString().slice(0, 10)
+        lastUpdated: formattedDate,
+        isDemo: false
       };
       await submitPlace(newPlace);
       overlay.style.display = "none";
@@ -781,10 +687,10 @@
             map.setView([lat, lng], 17);
             showIdentifyPanel(L.latLng(lat, lng));
           } else {
-            alert("在台灣找不到該地點，請嘗試不同的搜尋關鍵字。");
+            alert("在台灣找不到該餐廳，請嘗試不同的關鍵字。");
           }
         } catch (err) {
-          alert("搜尋失敗 — 請檢查您的網路連線後重試。");
+          alert("搜尋失敗 — 請檢查網路連線。");
         }
         return;
       }
