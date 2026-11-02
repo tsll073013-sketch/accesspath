@@ -66,7 +66,13 @@
 
   #add-mode-btn.active { background: #b8862f; }
 
-  #map { height: calc(100vh - 64px); width: 100%; }
+  #map { 
+    height: calc(100vh - 64px); 
+    width: 100%; 
+    min-height: 400px;
+    position: relative;
+    z-index: 1;
+  }
 
   /* 降低底圖預設色彩與圖示飽和度，凸顯自訂標記 */
   .leaflet-tile-pane {
@@ -153,12 +159,6 @@
     font-size: 13px;
     display: none;
   }
-
-  .popup-title { font-weight: 600; font-size: 15px; margin: 0 0 4px; }
-  .popup-row { font-size: 13px; margin: 3px 0; color: #3c392f; }
-  .popup-row b { color: var(--ink); }
-  .popup-updated { margin-top: 8px; font-size: 11.5px; color: var(--unknown); }
-  .popup-note { margin-top: 8px; font-size: 11px; color: var(--unknown); font-style: italic; }
 
   /* 彈出式表單 Modal */
   #overlay {
@@ -248,162 +248,430 @@
 </div>
 
 <script>
-  // ===== 請填入以下資訊 — 參閱設定指南第 2 部分 =====
-  const SUPABASE_URL = "PASTE_YOUR_SUPABASE_PROJECT_URL_HERE";
-  const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_ANON_KEY_HERE";
-  // ========================================================
+  window.addEventListener('DOMContentLoaded', () => {
+    // ===== 請填入 Supabase 專案資訊 =====
+    const SUPABASE_URL = "PASTE_YOUR_SUPABASE_PROJECT_URL_HERE";
+    const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_ANON_KEY_HERE";
 
-  const supabaseClient = (SUPABASE_URL.startsWith("http"))
-    ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-    : null;
+    // 安全檢查 Supabase 套件，避免 CDN 載入失敗導致 JS 卡死
+    const supabaseClient = (typeof supabase !== "undefined" && SUPABASE_URL.startsWith("http"))
+      ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      : null;
 
-  const colors = { good: "#4a8f6f", partial: "#d9a441", unknown: "#b7b2a3" };
+    const colors = { good: "#4a8f6f", partial: "#d9a441", unknown: "#b7b2a3" };
 
-  // ----- 預設種子資料：台北實體地標（無障礙詳細資訊僅供示範展示） -----
-  const seedPlaces = [
-    {
-      id: "seed-1",
-      name: "台北 101",
-      lat: 25.0339, lng: 121.5645,
-      status: "good",
-      entrance: "主要入口無階梯，設有自動門",
-      restroom: "B1 及觀景台樓層設有無障礙廁所",
-      parking: "地下停車場設有無障礙停車位",
-      notes: "示範資料 — 尚未實地驗證。",
-      lastUpdated: "2026-08-14"
-    },
-    {
-      id: "seed-2",
-      name: "中正紀念堂",
-      lat: 25.0347, lng: 121.5216,
-      status: "good",
-      entrance: "主廣場層設有無障礙斜坡道",
-      restroom: "主堂體附近設有無障礙廁所",
-      parking: "自由廣場附近設有無障礙停車位",
-      notes: "示範資料 — 尚未實地驗證。",
-      lastUpdated: "2026-07-30"
-    },
-    {
-      id: "seed-3",
-      name: "西門町商圈",
-      lat: 25.0421, lng: 121.5079,
-      status: "partial",
-      entrance: "多數路段無階梯，部分店家有高起門檻",
-      restroom: "西門紅樓附近設有公用無障礙廁所",
-      parking: "行人徒步區內無專用無障礙停車位",
-      notes: "示範資料 — 尚未實地驗證。",
-      lastUpdated: "2026-06-02"
-    },
-    {
-      id: "seed-4",
-      name: "大安森林公園",
-      lat: 25.0264, lng: 121.5352,
-      status: "good",
-      entrance: "設有多處無障礙平坦入口",
-      restroom: "園區內多處設有無障礙廁所",
-      parking: "捷運出口附近設有無障礙停車位",
-      notes: "示範資料 — 尚未實地驗證。",
-      lastUpdated: "2026-08-01"
-    },
-    {
-      id: "seed-5",
-      name: "台北車站",
-      lat: 25.0478, lng: 121.5170,
-      status: "unknown",
-      entrance: "尚無回報",
-      restroom: "尚無回報",
-      parking: "尚無回報",
-      notes: "",
-      lastUpdated: null
-    }
-  ];
-
-  let places = [];
-  let addMode = false;
-  let pendingLatLng = null;
-
-  function makeIcon(status) {
-    const color = colors[status] || colors.unknown;
-    return L.divIcon({
-      className: "",
-      html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2.5px solid #fdfcf8;box-shadow:0 1px 4px rgba(28,43,40,0.35);"></div>`,
-      iconSize: [14, 14],
-      iconAnchor: [7, 7]
-    });
-  }
-
-  function makeSearchResultIcon() {
-    return L.divIcon({
-      className: "",
-      html: `<div style="width:14px;height:14px;border-radius:50% 50% 50% 0;background:#3d6b5c;transform:rotate(-45deg);border:2px solid #fdfcf8;box-shadow:0 1px 4px rgba(28,43,40,0.4);"></div>`,
-      iconSize: [14, 14],
-      iconAnchor: [7, 12]
-    });
-  }
-
-  const map = L.map("map", { zoomControl: true }).setView([25.0375, 121.535], 13);
-
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> 貢獻者'
-  }).addTo(map);
-
-  let markerLayer = L.layerGroup().addTo(map);
-  let searchResultsLayer = L.layerGroup().addTo(map);
-
-  function renderMarkers() {
-    markerLayer.clearLayers();
-    places.forEach(place => {
-      const marker = L.marker([place.lat, place.lng], { icon: makeIcon(place.status) });
-      marker.on("click", () => showPlacePanel(place));
-      marker.addTo(markerLayer);
-    });
-  }
-
-  const statusLabels = { good: "確認無障礙", partial: "部分無障礙", unknown: "尚無資訊" };
-
-  function showPlacePanel(place) {
-    document.getElementById("dp-name").textContent = place.name;
-    const updatedText = place.lastUpdated
-      ? `最近確認日期：${place.lastUpdated}`
-      : "尚無回報紀錄 — 成為第一個新增資訊的人吧";
-    const notesHtml = place.notes ? `<div class="dp-notes">${place.notes}</div>` : "";
-    const hasInfo = place.entrance !== "尚無回報" || place.restroom !== "尚無回報";
-
-    document.getElementById("dp-body").innerHTML = `
-      <div class="dp-status-row">
-        <span class="dp-badge" style="background:${colors[place.status] || colors.unknown}">${statusLabels[place.status] || statusLabels.unknown}</span>
-      </div>
-      <div class="dp-section">
-        <div class="dp-row"><span class="dp-icon">🚪</span><span><b>入口設施</b>${place.entrance}</span></div>
-        <div class="dp-row"><span class="dp-icon">🚻</span><span><b>無障礙廁所</b>${place.restroom}</span></div>
-        <div class="dp-row"><span class="dp-icon">🅿️</span><span><b>停車設施</b>${place.parking}</span></div>
-      </div>
-      <div class="dp-updated">${updatedText}</div>
-      ${notesHtml}
-      <button class="dp-action" id="dp-add-btn">${hasInfo ? "提供更新建議" : "+ 新增無障礙資訊"}</button>
-    `;
-    document.getElementById("dp-add-btn").addEventListener("click", () => {
-      pendingLatLng = L.latLng(place.lat, place.lng);
-      openForm();
-      document.getElementById("f-name").value = place.name;
-    });
-    document.getElementById("detail-panel").classList.add("open");
-    map.panTo([place.lat, place.lng]);
-  }
-
-  document.getElementById("dp-close").addEventListener("click", () => {
-    document.getElementById("detail-panel").classList.remove("open");
-  });
-
-  // ----- 連接實際資料庫 (Supabase) -----
-  async function loadPlaces() {
-    if (!supabaseClient) {
-      // 未配置金鑰時使用預設範例資料，確保頁面可正常運作
-      places = seedPlaces;
-      renderMarkers();
+    if (typeof L === 'undefined') {
+      alert("Leaflet 地圖套件載入失敗，請確認網路連線。");
       return;
     }
-    const { data, error } = await supabaseClient
-      .from("places")
-      .select("*")
+
+    // 預設示範資料
+    const seedPlaces = [
+      {
+        id: "seed-1",
+        name: "台北 101",
+        lat: 25.0339, lng: 121.5645,
+        status: "good",
+        entrance: "主要入口無階梯，設有自動門",
+        restroom: "B1 及觀景台樓層設有無障礙廁所",
+        parking: "地下停車場設有無障礙停車位",
+        notes: "示範資料 — 尚未實地驗證。",
+        lastUpdated: "2026-08-14"
+      },
+      {
+        id: "seed-2",
+        name: "中正紀念堂",
+        lat: 25.0347, lng: 121.5216,
+        status: "good",
+        entrance: "主廣場層設有無障礙斜坡道",
+        restroom: "主堂體附近設有無障礙廁所",
+        parking: "自由廣場附近設有無障礙停車位",
+        notes: "示範資料 — 尚未實地驗證。",
+        lastUpdated: "2026-07-30"
+      },
+      {
+        id: "seed-3",
+        name: "西門町商圈",
+        lat: 25.0421, lng: 121.5079,
+        status: "partial",
+        entrance: "多數路段無階梯，部分店家有高起門檻",
+        restroom: "西門紅樓附近設有公用無障礙廁所",
+        parking: "行人徒步區內無專用無障礙停車位",
+        notes: "示範資料 — 尚未實地驗證。",
+        lastUpdated: "2026-06-02"
+      },
+      {
+        id: "seed-4",
+        name: "大安森林公園",
+        lat: 25.0264, lng: 121.5352,
+        status: "good",
+        entrance: "設有多處無障礙平坦入口",
+        restroom: "園區內多處設有無障礙廁所",
+        parking: "捷運出口附近設有無障礙停車位",
+        notes: "示範資料 — 尚未實地驗證。",
+        lastUpdated: "2026-08-01"
+      },
+      {
+        id: "seed-5",
+        name: "台北車站",
+        lat: 25.0478, lng: 121.5170,
+        status: "unknown",
+        entrance: "尚無回報",
+        restroom: "尚無回報",
+        parking: "尚無回報",
+        notes: "",
+        lastUpdated: null
+      }
+    ];
+
+    let places = [];
+    let addMode = false;
+    let pendingLatLng = null;
+
+    function makeIcon(status) {
+      const color = colors[status] || colors.unknown;
+      return L.divIcon({
+        className: "",
+        html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2.5px solid #fdfcf8;box-shadow:0 1px 4px rgba(28,43,40,0.35);"></div>`,
+        iconSize: [14, 14],
+        iconAnchor: [7, 7]
+      });
+    }
+
+    function makeSearchResultIcon() {
+      return L.divIcon({
+        className: "",
+        html: `<div style="width:14px;height:14px;border-radius:50% 50% 50% 0;background:#3d6b5c;transform:rotate(-45deg);border:2px solid #fdfcf8;box-shadow:0 1px 4px rgba(28,43,40,0.4);"></div>`,
+        iconSize: [14, 14],
+        iconAnchor: [7, 12]
+      });
+    }
+
+    // 初始化地圖
+    const map = L.map("map", { zoomControl: true }).setView([25.0375, 121.535], 13);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> 貢獻者'
+    }).addTo(map);
+
+    // 強制更新地圖尺寸校正
+    setTimeout(() => { map.invalidateSize(); }, 250);
+
+    let markerLayer = L.layerGroup().addTo(map);
+    let searchResultsLayer = L.layerGroup().addTo(map);
+
+    function renderMarkers() {
+      markerLayer.clearLayers();
+      places.forEach(place => {
+        const marker = L.marker([place.lat, place.lng], { icon: makeIcon(place.status) });
+        marker.on("click", () => showPlacePanel(place));
+        marker.addTo(markerLayer);
+      });
+    }
+
+    const statusLabels = { good: "確認無障礙", partial: "部分無障礙", unknown: "尚無資訊" };
+
+    function showPlacePanel(place) {
+      document.getElementById("dp-name").textContent = place.name;
+      const updatedText = place.lastUpdated
+        ? `最近確認日期：${place.lastUpdated}`
+        : "尚無回報紀錄 — 成為第一個新增資訊的人吧";
+      const notesHtml = place.notes ? `<div class="dp-notes">${place.notes}</div>` : "";
+      const hasInfo = place.entrance !== "尚無回報" || place.restroom !== "尚無回報";
+
+      document.getElementById("dp-body").innerHTML = `
+        <div class="dp-status-row">
+          <span class="dp-badge" style="background:${colors[place.status] || colors.unknown}">${statusLabels[place.status] || statusLabels.unknown}</span>
+        </div>
+        <div class="dp-section">
+          <div class="dp-row"><span class="dp-icon">🚪</span><span><b>入口設施</b>${place.entrance}</span></div>
+          <div class="dp-row"><span class="dp-icon">🚻</span><span><b>無障礙廁所</b>${place.restroom}</span></div>
+          <div class="dp-row"><span class="dp-icon">🅿️</span><span><b>停車設施</b>${place.parking}</span></div>
+        </div>
+        <div class="dp-updated">${updatedText}</div>
+        ${notesHtml}
+        <button class="dp-action" id="dp-add-btn">${hasInfo ? "提供更新建議" : "+ 新增無障礙資訊"}</button>
+      `;
+      document.getElementById("dp-add-btn").addEventListener("click", () => {
+        pendingLatLng = L.latLng(place.lat, place.lng);
+        openForm();
+        document.getElementById("f-name").value = place.name;
+      });
+      document.getElementById("detail-panel").classList.add("open");
+      map.panTo([place.lat, place.lng]);
+    }
+
+    document.getElementById("dp-close").addEventListener("click", () => {
+      document.getElementById("detail-panel").classList.remove("open");
+    });
+
+    async function loadPlaces() {
+      if (!supabaseClient) {
+        places = seedPlaces;
+        renderMarkers();
+        return;
+      }
+      const { data, error } = await supabaseClient
+        .from("places")
+        .select("*")
+        .eq("approved", true);
+
+      if (error) {
+        console.error("無法載入地點資料：", error);
+        places = seedPlaces;
+      } else {
+        places = data.map(p => ({
+          id: p.id,
+          name: p.name,
+          lat: p.lat,
+          lng: p.lng,
+          status: p.status,
+          entrance: p.entrance,
+          restroom: p.restroom,
+          parking: p.parking,
+          notes: p.notes,
+          lastUpdated: p.last_updated
+        }));
+      }
+      renderMarkers();
+    }
+
+    async function submitPlace(newPlace) {
+      if (!supabaseClient) {
+        places.push(newPlace);
+        renderMarkers();
+        alert("示範模式：此地點僅於本地端暫存顯示。請連接 Supabase 以正式儲存至雲端。");
+        return;
+      }
+      const { error } = await supabaseClient.from("places").insert({
+        name: newPlace.name,
+        lat: newPlace.lat,
+        lng: newPlace.lng,
+        status: newPlace.status,
+        entrance: newPlace.entrance,
+        restroom: newPlace.restroom,
+        parking: newPlace.parking,
+        notes: newPlace.notes,
+        last_updated: newPlace.lastUpdated,
+        approved: false
+      });
+      if (error) {
+        console.error("無法儲存地點：", error);
+        alert("儲存地點時發生錯誤，詳情請查看瀏覽器主控台（Console）。");
+        return;
+      }
+      alert("感謝您！您的提交已成功儲存，審核通過後將會對外顯示。");
+    }
+
+    loadPlaces();
+
+    const addBtn = document.getElementById("add-mode-btn");
+    const hintBanner = document.getElementById("hint-banner");
+    const overlay = document.getElementById("overlay");
+
+    addBtn.addEventListener("click", () => {
+      addMode = !addMode;
+      addBtn.classList.toggle("active", addMode);
+      hintBanner.style.display = addMode ? "block" : "none";
+    });
+
+    map.on("click", (e) => {
+      if (addMode) {
+        pendingLatLng = e.latlng;
+        addMode = false;
+        addBtn.classList.remove("active");
+        hintBanner.style.display = "none";
+        openForm();
+      } else {
+        showIdentifyPanel(e.latlng);
+      }
+    });
+
+    function renderEmptyPanel(name, latlng, addressLine) {
+      document.getElementById("dp-name").textContent = name;
+      const addressHtml = addressLine ? `<div class="dp-empty" style="padding-bottom:0;">${addressLine}</div>` : "";
+      document.getElementById("dp-body").innerHTML = `
+        <div class="dp-status-row">
+          <span class="dp-badge" style="background:${colors.unknown}">尚無資訊</span>
+        </div>
+        ${addressHtml}
+        <div class="dp-empty">目前尚無人回報此地點的無障礙詳細資訊。</div>
+        <button class="dp-action" id="dp-add-btn">+ 新增無障礙資訊</button>
+      `;
+      document.getElementById("dp-add-btn").addEventListener("click", () => {
+        pendingLatLng = latlng;
+        openForm();
+        document.getElementById("f-name").value = name;
+      });
+      document.getElementById("detail-panel").classList.add("open");
+    }
+
+    async function showIdentifyPanel(latlng) {
+      document.getElementById("dp-name").textContent = "查詢中…";
+      document.getElementById("dp-body").innerHTML = "";
+      document.getElementById("detail-panel").classList.add("open");
+
+      let name = "未命名地點";
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}&zoom=18`
+        );
+        const data = await res.json();
+        if (data.display_name) name = data.display_name.split(",").slice(0, 2).join(",");
+      } catch (err) {}
+
+      renderEmptyPanel(name, latlng);
+    }
+
+    function openForm() {
+      document.getElementById("f-name").value = "";
+      document.getElementById("f-status").value = "unknown";
+      document.getElementById("f-entrance").value = "";
+      document.getElementById("f-restroom").value = "";
+      document.getElementById("f-parking").value = "";
+      document.getElementById("f-notes").value = "";
+      overlay.style.display = "flex";
+    }
+
+    document.getElementById("f-cancel").addEventListener("click", () => {
+      overlay.style.display = "none";
+      pendingLatLng = null;
+    });
+
+    document.getElementById("f-save").addEventListener("click", async () => {
+      const name = document.getElementById("f-name").value.trim();
+      if (!name || !pendingLatLng) {
+        alert("請輸入地點名稱。");
+        return;
+      }
+      const newPlace = {
+        id: "place-" + Date.now(),
+        name,
+        lat: pendingLatLng.lat,
+        lng: pendingLatLng.lng,
+        status: document.getElementById("f-status").value,
+        entrance: document.getElementById("f-entrance").value.trim() || "未說明",
+        restroom: document.getElementById("f-restroom").value.trim() || "未說明",
+        parking: document.getElementById("f-parking").value.trim() || "未說明",
+        notes: document.getElementById("f-notes").value.trim(),
+        lastUpdated: new Date().toISOString().slice(0, 10)
+      };
+      await submitPlace(newPlace);
+      overlay.style.display = "none";
+      pendingLatLng = null;
+    });
+
+    function metersBetween(lat1, lng1, lat2, lng2) {
+      const R = 6371000;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    async function searchPOIs(query) {
+      const center = map.getCenter();
+      const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const overpassQuery = `[out:json][timeout:25];(node["name"~"${escaped}",i](around:5000,${center.lat},${center.lng});way["name"~"${escaped}",i](around:5000,${center.lat},${center.lng}););out center 40;`;
+
+      const res = await fetch("https://overpass-api.de/api/interpreter", {
+        method: "POST",
+        body: "data=" + encodeURIComponent(overpassQuery)
+      });
+      const data = await res.json();
+
+      return data.elements
+        .map(el => {
+          const lat = el.lat || (el.center && el.center.lat);
+          const lng = el.lon || (el.center && el.center.lon);
+          const name = el.tags && el.tags.name;
+          if (!lat || !lng || !name) return null;
+          const addrParts = [el.tags["addr:city"], el.tags["addr:district"], el.tags["addr:street"], el.tags["addr:housenumber"]].filter(Boolean);
+          return { name, lat, lng, address: addrParts.join(" ") };
+        })
+        .filter(Boolean);
+    }
+
+    function showPOIPanel(poi) {
+      const existing = places.find(p =>
+        p.name.toLowerCase() === poi.name.toLowerCase() &&
+        metersBetween(p.lat, p.lng, poi.lat, poi.lng) < 60
+      );
+      if (existing) {
+        showPlacePanel(existing);
+      } else {
+        renderEmptyPanel(poi.name, L.latLng(poi.lat, poi.lng), poi.address);
+      }
+    }
+
+    document.getElementById("search-btn").addEventListener("click", async () => {
+      const query = document.getElementById("search-input").value.trim();
+      if (!query) return;
+
+      searchResultsLayer.clearLayers();
+
+      const localMatches = places.filter(p => p.name.toLowerCase().includes(query.toLowerCase()));
+
+      let poiMatches = [];
+      try {
+        poiMatches = await searchPOIs(query);
+      } catch (err) {
+        console.error("地點搜尋失敗：", err);
+      }
+
+      const newPOIs = poiMatches.filter(poi =>
+        !localMatches.some(p => metersBetween(p.lat, p.lng, poi.lat, poi.lng) < 60)
+      );
+
+      newPOIs.forEach(poi => {
+        const marker = L.marker([poi.lat, poi.lng], { icon: makeSearchResultIcon() });
+        marker.on("click", () => showPOIPanel(poi));
+        marker.addTo(searchResultsLayer);
+      });
+
+      const totalResults = localMatches.length + newPOIs.length;
+
+      if (totalResults === 0) {
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=tw&limit=1`
+          );
+          const results = await res.json();
+          if (results.length > 0) {
+            const lat = parseFloat(results[0].lat);
+            const lng = parseFloat(results[0].lon);
+            map.setView([lat, lng], 17);
+            showIdentifyPanel(L.latLng(lat, lng));
+          } else {
+            alert("在台灣找不到該地點，請嘗試不同的搜尋關鍵字。");
+          }
+        } catch (err) {
+          alert("搜尋失敗 — 請檢查您的網路連線後重試。");
+        }
+        return;
+      }
+
+      if (totalResults === 1) {
+        if (localMatches.length === 1) {
+          map.setView([localMatches[0].lat, localMatches[0].lng], 17);
+          showPlacePanel(localMatches[0]);
+        } else {
+          map.setView([newPOIs[0].lat, newPOIs[0].lng], 17);
+          showPOIPanel(newPOIs[0]);
+        }
+        return;
+      }
+
+      const allCoords = [
+        ...localMatches.map(p => [p.lat, p.lng]),
+        ...newPOIs.map(p => [p.lat, p.lng])
+      ];
+      map.fitBounds(allCoords, { padding: [60, 60], maxZoom: 16 });
+    });
+  });
+</script>
+
+</body>
+</html>
