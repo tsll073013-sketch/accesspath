@@ -24,6 +24,7 @@
 
   body {
     margin: 0;
+    overflow-x: hidden;
     font-family: -apple-system, "BlinkMacSystemFont", "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang TC", "Microsoft JhengHei", sans-serif;
     color: var(--ink);
     background: var(--paper);
@@ -79,9 +80,9 @@
   }
 
   .legend {
-    position: absolute;
+    position: fixed;
     z-index: 500;
-    bottom: 22px;
+    bottom: 24px;
     left: 12px;
     background: rgba(246, 244, 238, 0.95);
     border: 1px solid var(--line);
@@ -94,20 +95,20 @@
     display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px;
   }
 
-  /* 滑入式餐廳資訊卡面板 */
+  /* 右下角滑入式餐廳資訊卡面板 */
   #detail-panel {
-    position: absolute;
-    z-index: 700;
-    top: 16px;
-    left: 12px;
+    position: fixed;
+    z-index: 1001;
+    bottom: 24px;
+    right: 12px;
     width: 330px;
-    max-width: 85vw;
+    max-width: calc(100vw - 24px);
     max-height: calc(100vh - 100px);
     overflow-y: auto;
     background: #fdfcf8;
     border-radius: 12px;
     box-shadow: 0 10px 30px rgba(28,43,40,0.22);
-    transform: translateX(-130%);
+    transform: translateX(130%);
     transition: transform 0.22s ease;
   }
   #detail-panel.open { transform: translateX(0); }
@@ -183,7 +184,7 @@
   #overlay {
     display: none;
     position: fixed; inset: 0; background: rgba(28,43,40,0.4);
-    z-index: 1000; align-items: center; justify-content: center;
+    z-index: 1100; align-items: center; justify-content: center;
   }
   #form-card {
     background: white; border-radius: 10px; padding: 22px 24px;
@@ -491,229 +492,4 @@
       });
       if (error) {
         console.error("無法儲存地點：", error);
-        alert("儲存地點時發生錯誤，請檢查主控台。");
-        return;
-      }
-      alert("感謝您！實查資料已提交。");
-    }
-
-    loadPlaces();
-
-    const addBtn = document.getElementById("add-mode-btn");
-    const hintBanner = document.getElementById("hint-banner");
-    const overlay = document.getElementById("overlay");
-
-    addBtn.addEventListener("click", () => {
-      addMode = !addMode;
-      addBtn.classList.toggle("active", addMode);
-      hintBanner.style.display = addMode ? "block" : "none";
-    });
-
-    map.on("click", (e) => {
-      if (addMode) {
-        pendingLatLng = e.latlng;
-        addMode = false;
-        addBtn.classList.remove("active");
-        hintBanner.style.display = "none";
-        openForm();
-      } else {
-        showIdentifyPanel(e.latlng);
-      }
-    });
-
-    function renderEmptyPanel(name, latlng, addressLine) {
-      document.getElementById("dp-name").textContent = name;
-      const addressHtml = addressLine ? `<div class="dp-empty" style="padding-bottom:0;">${addressLine}</div>` : "";
-      document.getElementById("dp-body").innerHTML = `
-        <div class="dp-status-row">
-          <span class="dp-badge" style="background:${colors.unknown}">尚無實查資訊</span>
-        </div>
-        ${addressHtml}
-        <div class="dp-empty">目前尚無人回報這間餐廳的無障礙詳細資訊。</div>
-        <button class="dp-action" id="dp-add-btn">+ 新增餐廳無障礙資訊</button>
-      `;
-      document.getElementById("dp-add-btn").addEventListener("click", () => {
-        pendingLatLng = latlng;
-        openForm();
-        document.getElementById("f-name").value = name;
-      });
-      document.getElementById("detail-panel").classList.add("open");
-    }
-
-    async function showIdentifyPanel(latlng) {
-      document.getElementById("dp-name").textContent = "查詢中…";
-      document.getElementById("dp-body").innerHTML = "";
-      document.getElementById("detail-panel").classList.add("open");
-
-      let name = "未命名餐廳/地點";
-      try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}&zoom=18`
-        );
-        const data = await res.json();
-        if (data.display_name) name = data.display_name.split(",").slice(0, 2).join(",");
-      } catch (err) {}
-
-      renderEmptyPanel(name, latlng);
-    }
-
-    function openForm() {
-      document.getElementById("f-name").value = "";
-      document.getElementById("f-status").value = "unknown";
-      document.getElementById("f-entrance").value = "";
-      document.getElementById("f-interior").value = "";
-      document.getElementById("f-seating").value = "";
-      document.getElementById("f-restroom").value = "";
-      document.getElementById("f-notice").value = "";
-      document.getElementById("f-notes").value = "";
-      overlay.style.display = "flex";
-    }
-
-    document.getElementById("f-cancel").addEventListener("click", () => {
-      overlay.style.display = "none";
-      pendingLatLng = null;
-    });
-
-    document.getElementById("f-save").addEventListener("click", async () => {
-      const name = document.getElementById("f-name").value.trim();
-      if (!name || !pendingLatLng) {
-        alert("請輸入餐廳名稱。");
-        return;
-      }
-
-      const today = new Date();
-      const formattedDate = `${today.getFullYear()}年${String(today.getMonth() + 1).padStart(2, '0')}月${String(today.getDate()).padStart(2, '0')}日`;
-
-      const newPlace = {
-        id: "place-" + Date.now(),
-        name,
-        lat: pendingLatLng.lat,
-        lng: pendingLatLng.lng,
-        status: document.getElementById("f-status").value,
-        entrance: document.getElementById("f-entrance").value.trim() || "未說明",
-        interior: document.getElementById("f-interior").value.trim() || "未說明",
-        seating: document.getElementById("f-seating").value.trim() || "未說明",
-        restroom: document.getElementById("f-restroom").value.trim() || "未說明",
-        notice: document.getElementById("f-notice").value.trim(),
-        notes: document.getElementById("f-notes").value.trim(),
-        lastUpdated: formattedDate,
-        isDemo: false
-      };
-      await submitPlace(newPlace);
-      overlay.style.display = "none";
-      pendingLatLng = null;
-    });
-
-    function metersBetween(lat1, lng1, lat2, lng2) {
-      const R = 6371000;
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLng = (lng2 - lng1) * Math.PI / 180;
-      const a = Math.sin(dLat / 2) ** 2 +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    }
-
-    async function searchPOIs(query) {
-      const center = map.getCenter();
-      const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const overpassQuery = `[out:json][timeout:25];(node["name"~"${escaped}",i](around:5000,${center.lat},${center.lng});way["name"~"${escaped}",i](around:5000,${center.lat},${center.lng}););out center 40;`;
-
-      const res = await fetch("https://overpass-api.de/api/interpreter", {
-        method: "POST",
-        body: "data=" + encodeURIComponent(overpassQuery)
-      });
-      const data = await res.json();
-
-      return data.elements
-        .map(el => {
-          const lat = el.lat || (el.center && el.center.lat);
-          const lng = el.lon || (el.center && el.center.lon);
-          const name = el.tags && el.tags.name;
-          if (!lat || !lng || !name) return null;
-          const addrParts = [el.tags["addr:city"], el.tags["addr:district"], el.tags["addr:street"], el.tags["addr:housenumber"]].filter(Boolean);
-          return { name, lat, lng, address: addrParts.join(" ") };
-        })
-        .filter(Boolean);
-    }
-
-    function showPOIPanel(poi) {
-      const existing = places.find(p =>
-        p.name.toLowerCase() === poi.name.toLowerCase() &&
-        metersBetween(p.lat, p.lng, poi.lat, poi.lng) < 60
-      );
-      if (existing) {
-        showPlacePanel(existing);
-      } else {
-        renderEmptyPanel(poi.name, L.latLng(poi.lat, poi.lng), poi.address);
-      }
-    }
-
-    document.getElementById("search-btn").addEventListener("click", async () => {
-      const query = document.getElementById("search-input").value.trim();
-      if (!query) return;
-
-      searchResultsLayer.clearLayers();
-
-      const localMatches = places.filter(p => p.name.toLowerCase().includes(query.toLowerCase()));
-
-      let poiMatches = [];
-      try {
-        poiMatches = await searchPOIs(query);
-      } catch (err) {
-        console.error("地點搜尋失敗：", err);
-      }
-
-      const newPOIs = poiMatches.filter(poi =>
-        !localMatches.some(p => metersBetween(p.lat, p.lng, poi.lat, poi.lng) < 60)
-      );
-
-      newPOIs.forEach(poi => {
-        const marker = L.marker([poi.lat, poi.lng], { icon: makeSearchResultIcon() });
-        marker.on("click", () => showPOIPanel(poi));
-        marker.addTo(searchResultsLayer);
-      });
-
-      const totalResults = localMatches.length + newPOIs.length;
-
-      if (totalResults === 0) {
-        try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=tw&limit=1`
-          );
-          const results = await res.json();
-          if (results.length > 0) {
-            const lat = parseFloat(results[0].lat);
-            const lng = parseFloat(results[0].lon);
-            map.setView([lat, lng], 17);
-            showIdentifyPanel(L.latLng(lat, lng));
-          } else {
-            alert("在台灣找不到該餐廳，請嘗試不同的關鍵字。");
-          }
-        } catch (err) {
-          alert("搜尋失敗 — 請檢查網路連線。");
-        }
-        return;
-      }
-
-      if (totalResults === 1) {
-        if (localMatches.length === 1) {
-          map.setView([localMatches[0].lat, localMatches[0].lng], 17);
-          showPlacePanel(localMatches[0]);
-        } else {
-          map.setView([newPOIs[0].lat, newPOIs[0].lng], 17);
-          showPOIPanel(newPOIs[0]);
-        }
-        return;
-      }
-
-      const allCoords = [
-        ...localMatches.map(p => [p.lat, p.lng]),
-        ...newPOIs.map(p => [p.lat, p.lng])
-      ];
-      map.fitBounds(allCoords, { padding: [60, 60], maxZoom: 16 });
-    });
-  });
-</script>
-
-</body>
-</html>
+        alert("儲存地點
